@@ -53,34 +53,39 @@ class DesktopReminderScheduler(
     private var doseJob: Job? = null
     private var checkInJob: Job? = null
 
-    override suspend fun rescheduleAll() = mutex.withLock {
-        doseJob?.cancel()
-        checkInJob?.cancel()
-        val s = settings.current()
-        if (!s.remindersEnabled) return@withLock
-        val zone = TimeZone.currentSystemDefault()
-        val now = Clock.System.now()
-        val next = ScheduleEngine.nextOccurrence(medications.allActiveForActivePets(), now, zone)
-        if (next != null) {
-            doseJob = scope.launch {
-                val delayMs: Long = (next - Clock.System.now()).inWholeMilliseconds.coerceAtLeast(0)
-                delay(delayMs)
-                notifyDueAt(next, zone)
-                rescheduleAll()
+    override suspend fun rescheduleAll() { // <-- Use { instead of =
+        mutex.withLock {
+            doseJob?.cancel()
+            checkInJob?.cancel()
+            val s = settings.current()
+            if (!s.remindersEnabled) return@withLock
+
+            val zone = TimeZone.currentSystemDefault()
+            val now = Clock.System.now()
+            val next = ScheduleEngine.nextOccurrence(medications.allActiveForActivePets(), now, zone)
+
+            if (next != null) {
+                doseJob = scope.launch {
+                    val delayMs: Long = (next - Clock.System.now()).inWholeMilliseconds.coerceAtLeast(0)
+                    delay(delayMs)
+                    notifyDueAt(next, zone)
+                    rescheduleAll()
+                }
             }
-        }
-        if (s.checkInReminderEnabled) {
-            val today = now.toLocalDate(zone)
-            var target = today.at(s.checkInReminderTime, zone)
-            if (target <= now) target = today.plusDays(1).at(s.checkInReminderTime, zone)
-            checkInJob = scope.launch {
-                val delayMs: Long = (target - Clock.System.now()).inWholeMilliseconds.coerceAtLeast(0)
-                delay(delayMs)
-                val day = Clock.System.now().toLocalDate(zone)
-                val missing = pets.observeActivePets().first().filter { checkIns.forPetBetween(it.id, day, day).isEmpty() }
-                if (missing.isNotEmpty()) notifier.notify("How was ${missing.first().name}'s day?", "A 30-second check-in keeps the picture clear.")
-                delay(61_000L)
-                rescheduleAll()
+
+            if (s.checkInReminderEnabled) {
+                val today = now.toLocalDate(zone)
+                var target = today.at(s.checkInReminderTime, zone)
+                if (target <= now) target = today.plusDays(1).at(s.checkInReminderTime, zone)
+                checkInJob = scope.launch {
+                    val delayMs: Long = (target - Clock.System.now()).inWholeMilliseconds.coerceAtLeast(0)
+                    delay(delayMs)
+                    val day = Clock.System.now().toLocalDate(zone)
+                    val missing = pets.observeActivePets().first().filter { checkIns.forPetBetween(it.id, day, day).isEmpty() }
+                    if (missing.isNotEmpty()) notifier.notify("How was ${missing.first().name}'s day?", "A 30-second check-in keeps the picture clear.")
+                    delay(61_000L)
+                    rescheduleAll()
+                }
             }
         }
     }
