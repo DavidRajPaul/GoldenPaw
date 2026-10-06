@@ -1,0 +1,17 @@
+*.iml
+.gradle/
+.kotlin/
+/local.properties
+/.idea/
+.DS_Store
+build/
+/captures
+.externalNativeBuild
+.cxx
+xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata
+iosApp/iosApp.xcodeproj/
+!iosApp/project.yml
+supabase/.temp/
+supabase/.branches/
+.env

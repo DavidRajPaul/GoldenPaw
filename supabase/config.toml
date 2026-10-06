@@ -1,0 +1,5 @@
+# Minimal Supabase CLI config. `supabase link --project-ref <ref>` then `supabase db push`.
+project_id = "goldenpaw"
+
+[functions.weekly-summary]
+verify_jwt = true
