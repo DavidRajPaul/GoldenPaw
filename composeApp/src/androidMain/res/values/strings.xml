@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">GoldenPaw</string>
+    <string name="widget_description">Today\'s doses with a one-tap Given button</string>
+    <string name="shortcut_quick_log">Quick log</string>
+    <string name="shortcut_check_in">Daily check-in</string>
+    <string name="shortcut_symptom">Log a symptom</string>
+</resources>

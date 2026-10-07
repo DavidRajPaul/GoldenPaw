@@ -16,3 +16,19 @@ About 10 minutes on a real phone. Covers every MVP flow.
 12. Export JSON, then try Delete all data. The app restarts at onboarding.
 
 ---
+
+## v1.1 additions (about 15 minutes, two phones if you can)
+
+13. **Gamification:** give a dose and do a check-in. Today shows the rings closing and points rising; the first-dose and first-check-in badges celebrate once. Open **Settings → Care journey**. Turn on **gentle mode** (Streaks, levels and badges off) and check every counter disappears.
+14. **Local care team:** Settings → Care team → **On this device**, add "Sam" as Family. On Today tap the caregiver chip, switch to Sam and give a dose. The dose shows "Sam"; switch back and tap Given on the same dose: the **already given** warning appears.
+15. **Widget:** Settings → Add home-screen widget (or long-press the home screen). Tap **Given** on the widget; the app's Today updates.
+16. **Quick log:** long-press the app icon → Quick log. Log a symptom chip and a weight.
+17. **Vet visit:** Pets → your pet → Vet visits → Add for tomorrow. A reminder arrives the evening before.
+18. **Weekly summary:** Insights → Weekly. Free shows a locked preview; after starting the Plus trial a summary appears with the "Not veterinary advice" label (on-device writer without Supabase).
+
+With Supabase configured (see README):
+
+19. Phone A: Care team → sign in with the email code → **Turn on sharing** → **Invite** as Sitter with an end date. Phone B: sign in → **I have an invite code**. Pets appear on B.
+20. Give a dose on B; reopen the app on A. A shows "Given by <B's name>" and no reminder fires for it. B can't edit medications.
+21. On A remove B from the team; after B syncs, the shared pets leave B's device.
+22. With the Edge Function deployed, refresh the weekly summary: the source label reads "Written by AI".
