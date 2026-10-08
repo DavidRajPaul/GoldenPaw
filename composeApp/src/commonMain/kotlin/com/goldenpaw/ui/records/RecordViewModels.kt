@@ -19,7 +19,7 @@ import com.goldenpaw.domain.repository.HealthDocumentRepository
 import com.goldenpaw.domain.repository.PetRepository
 import com.goldenpaw.domain.repository.ReminderGateway
 import com.goldenpaw.domain.repository.SettingsRepository
-import com.goldenpaw.domain.usecase.CareTeamService
+import com.goldenpaw.domain.usecase.CareAttribution
 import com.goldenpaw.platform.PageImageProcessor
 import com.goldenpaw.report.HealthRecordService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -101,7 +101,7 @@ class RecordEditorViewModel(
     private val service: HealthRecordService,
     private val pets: PetRepository,
     private val settings: SettingsRepository,
-    private val careTeam: CareTeamService,
+    private val careTeam: CareAttribution,
     private val reminders: ReminderGateway,
     private val textReader: DocumentTextReader,
     private val processor: PageImageProcessor,
@@ -395,8 +395,11 @@ class RecordDetailViewModel(
 ) : ViewModel() {
     private val ids = MutableStateFlow<Pair<String, String>?>(null)
 
+    /** Bumped when files change on disk (the PDF was rebuilt): the file check isn't part of the database flow. */
+    private val filesVersion = MutableStateFlow(0)
+
     val state: StateFlow<RecordDetailState> = ids.filterNotNull().flatMapLatest { (petId, recordId) ->
-        combine(documents.observeForPet(petId), pets.observePet(petId)) { list, pet ->
+        combine(documents.observeForPet(petId), pets.observePet(petId), filesVersion) { list, pet, _ ->
             val record = list.firstOrNull { it.id == recordId }
             RecordDetailState(
                 loading = false,
@@ -417,6 +420,7 @@ class RecordDetailViewModel(
             if (record.pdfPath == null || !files.exists(record.pdfPath)) {
                 val path = service.writePdf(record, settings.current().ownerName)
                 if (path != null) documents.upsert(record.copy(pdfPath = path))
+                filesVersion.update { it + 1 }
             }
         }
     }

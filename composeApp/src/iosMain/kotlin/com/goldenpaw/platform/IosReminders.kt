@@ -118,11 +118,11 @@ class IosReminderScheduler(
         ScheduleEngine.upcomingOccurrences(medications.allActiveForActivePets(), now, zone, limit = 48).forEach { (med, at) ->
             val petName = petNames.getOrPut(med.petId) { pets.getPet(med.petId)?.name.orEmpty() }
             val content = UNMutableNotificationContent().apply {
-                title = ("$petName · ${med.name}")
-                body = ("${med.dosageOn(at.toLocalDate(zone))}${if (med.withFood) " · with food" else ""} is due now")
-                sound = (UNNotificationSound.defaultSound)
-                categoryIdentifier = (CATEGORY_DOSE)
-                userInfo = (mapOf<Any?, Any?>("medId" to med.id, "at" to at.toEpochMilliseconds().toString(), "petId" to med.petId))
+                setTitle("$petName · ${med.name}")
+                setBody("${med.dosageOn(at.toLocalDate(zone))}${if (med.withFood) " · with food" else ""} is due now")
+                setSound(UNNotificationSound.defaultSound)
+                setCategoryIdentifier(CATEGORY_DOSE)
+                setUserInfo(mapOf<Any?, Any?>("medId" to med.id, "at" to at.toEpochMilliseconds().toString(), "petId" to med.petId))
             }
             val seconds = (at - now).inWholeSeconds.toDouble().coerceAtLeast(1.0)
             val trigger = UNTimeIntervalNotificationTrigger.triggerWithTimeInterval(seconds, repeats = false)
@@ -137,9 +137,9 @@ class IosReminderScheduler(
                 minute = (s.checkInReminderTime.minute.toLong())
             }
             val content = UNMutableNotificationContent().apply {
-                title = ("How was today?")
-                body = ("A 30-second check-in keeps the picture clear for you and your vet.")
-                userInfo = (mapOf<Any?, Any?>("open" to "checkin"))
+                setTitle("How was today?")
+                setBody("A 30-second check-in keeps the picture clear for you and your vet.")
+                setUserInfo(mapOf<Any?, Any?>("open" to "checkin"))
             }
             center.addNotificationRequest(
                 UNNotificationRequest.requestWithIdentifier(CHECKIN_ID, content, UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(comps, repeats = true)),
@@ -157,8 +157,8 @@ class IosReminderScheduler(
     override suspend fun notifyRefill(medication: Medication) {
         val pet = pets.getPet(medication.petId) ?: return
         val content = UNMutableNotificationContent().apply {
-            title = ("Refill ${medication.name} for ${pet.name}")
-            body = ("About ${medication.daysOfSupplyLeft() ?: 0} days of supply left.")
+            setTitle("Refill ${medication.name} for ${pet.name}")
+            setBody("About ${medication.daysOfSupplyLeft() ?: 0} days of supply left.")
         }
         center.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier("refill:${medication.id}", content, UNTimeIntervalNotificationTrigger.triggerWithTimeInterval(1.0, false)),
@@ -168,8 +168,8 @@ class IosReminderScheduler(
 
     fun sendTest(): Boolean {
         val content = UNMutableNotificationContent().apply {
-            title = ("Reminders are working")
-            body = ("This is how medication reminders will look.")
+            setTitle("Reminders are working")
+            setBody("This is how medication reminders will look.")
         }
         center.addNotificationRequest(
             UNNotificationRequest.requestWithIdentifier("test", content, UNTimeIntervalNotificationTrigger.triggerWithTimeInterval(2.0, false)),

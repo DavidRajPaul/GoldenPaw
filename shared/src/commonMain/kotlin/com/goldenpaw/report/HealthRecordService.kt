@@ -44,14 +44,14 @@ class HealthRecordService(
     suspend fun save(document: HealthDocument, ownerName: String): HealthDocument = withContext(Dispatchers.IO) {
         val previous = documents.get(document.id)
         val dir = recordDir(document.id)
-        val stamp = clock.now().toEpochMilliseconds().toString(36)
 
         val pagePaths = document.pagePaths.mapIndexedNotNull { index, path ->
             if (path.startsWith("$dir/")) {
                 path
             } else {
                 val bytes = files.readBytes(path) ?: return@mapIndexedNotNull null
-                val target = "$dir/page-${index + 1}-$stamp.jpg"
+                // Unique name: an edit can add a page while an older file with the same index still exists.
+                val target = "$dir/page-${index + 1}-${newId().take(8)}.jpg"
                 files.writeBytes(target, bytes)
                 if (path.startsWith(inboxDir)) files.delete(path)
                 target

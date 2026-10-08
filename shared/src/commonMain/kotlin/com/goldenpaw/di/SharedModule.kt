@@ -53,6 +53,7 @@ import org.koin.dsl.module
 import com.goldenpaw.data.repository.HealthDocumentRepositoryImpl
 import com.goldenpaw.domain.repository.HealthDocumentRepository
 import com.goldenpaw.report.HealthRecordService
+import com.goldenpaw.domain.usecase.CareAttribution
 
 /**
  * Platform pieces the shared module needs:
@@ -105,7 +106,7 @@ val sharedModule = module {
     single { AiSummaryClient(get(), get(), get(), get()) } bind SummaryGenerator::class
 
     // Domain services & use cases
-    single { CareTeamService(get(), get(), get(), get(), get()) }
+    single { CareTeamService(get(), get(), get(), get(), get()) } bind CareAttribution::class
     factory { ObserveDoseSlotsUseCase(get(), get(), get()) }
     factory { LogDoseUseCase(get(), get(), get(), get(), get()) }
     factory { UndoDoseUseCase(get(), get(), get()) }

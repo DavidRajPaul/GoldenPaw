@@ -2,6 +2,7 @@ package com.goldenpaw.domain.model
 
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import com.goldenpaw.core.epochDay
 
 /** One line of a vaccine card (or a deworming / flea-tick treatment, which cards list the same way). */
 data class VaccineRecord(
@@ -11,11 +12,14 @@ data class VaccineRecord(
     /** Batch / lot number from the sticker, if any. */
     val batch: String = "",
 ) {
+    /** Days from [today] until [nextDue] (negative when overdue), or null without a due date. */
+    fun daysUntilDue(today: LocalDate): Int? = nextDue?.let { (it.epochDay() - today.epochDay()).toInt() }
+
     fun status(today: LocalDate, soonDays: Int = 30): VaccineStatus {
-        val due = nextDue ?: return VaccineStatus.NO_DUE_DATE
+        val days = daysUntilDue(today) ?: return VaccineStatus.NO_DUE_DATE
         return when {
-            due < today -> VaccineStatus.OVERDUE
-            due.toEpochDays() - today.toEpochDays() <= soonDays -> VaccineStatus.DUE_SOON
+            days < 0 -> VaccineStatus.OVERDUE
+            days <= soonDays -> VaccineStatus.DUE_SOON
             else -> VaccineStatus.UP_TO_DATE
         }
     }

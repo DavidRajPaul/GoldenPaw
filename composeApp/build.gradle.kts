@@ -78,6 +78,13 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.swing)
             }
         }
+        // ViewModel, navigation and desktop-platform tests. ViewModels run on the Swing main dispatcher.
+        val desktopTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.swing)
+            }
+        }
     }
 }
 
@@ -118,6 +125,11 @@ android {
     packaging {
         resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "/META-INF/versions/9/previous-compilation-data.bin")
     }
+}
+
+// ViewModel tests dispatch on Swing's main thread; no display is needed for that.
+tasks.withType<Test>().configureEach {
+    systemProperty("java.awt.headless", "true")
 }
 
 compose.desktop {
