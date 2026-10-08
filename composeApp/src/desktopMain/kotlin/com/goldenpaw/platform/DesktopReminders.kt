@@ -71,7 +71,7 @@ class DesktopNotifier {
     }.getOrDefault(false)
 
     /** AppleScript string literal: quotes and backslashes escaped. */
-    private fun appleScriptString(text: String): String =
+    internal fun appleScriptString(text: String): String =
         "\"" + text.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
     /** Opens the OS notification settings where that's possible. */

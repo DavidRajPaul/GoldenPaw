@@ -93,10 +93,11 @@ composeApp (UI)                              shared (no UI)
 ./gradlew :composeApp:installDebug          # Android (device or emulator)
 ./gradlew :composeApp:run                   # Desktop
 ./gradlew :shared:desktopTest               # shared logic tests
+./gradlew :composeApp:desktopTest           # ViewModel, navigation and desktop platform tests
 cd iosApp && xcodegen generate && open iosApp.xcodeproj   # iOS, then Run
 ```
 
-CI (`.github/workflows/ci.yml`) runs the shared tests, builds the debug APK (downloadable as an artifact), compiles Desktop, and builds the iOS framework on `main` or on demand.
+CI (`.github/workflows/ci.yml`) runs the shared and app unit tests, builds the debug APK (downloadable as an artifact), compiles Desktop, and builds the iOS framework on `main` or on demand.
 
 Without Supabase keys the app is **fully local**: everything works except syncing between phones and AI-written summaries (the on-device summary is used instead).
 
