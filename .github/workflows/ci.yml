@@ -73,3 +73,14 @@ jobs:
         with: { distribution: temurin, java-version: '17' }
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64 --stacktrace
+      - name: Generate Xcode project
+        run: brew install xcodegen && cd iosApp && xcodegen generate
+      - name: Build iOS app (simulator)
+        run: |
+          xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iosApp-xcodeproj
+          path: iosApp/iosApp.xcodeproj
