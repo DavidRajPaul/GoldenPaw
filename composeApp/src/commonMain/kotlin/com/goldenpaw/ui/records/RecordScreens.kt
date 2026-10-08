@@ -834,18 +834,18 @@ private fun VaccineLine(v: VaccineRecord, today: LocalDate) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            StatusPill(v.status(today), v.nextDue, today)
+            StatusPill(v, today)
         }
     }
 }
 
 @Composable
-private fun StatusPill(status: VaccineStatus, due: LocalDate?, today: LocalDate) {
+private fun StatusPill(vaccine: VaccineRecord, today: LocalDate) {
     val wellness = LocalWellnessColors.current
-    val (text, color) = when (status) {
+    val (text, color) = when (vaccine.status(today)) {
         VaccineStatus.OVERDUE -> "Overdue" to wellness.hard
         VaccineStatus.DUE_SOON -> {
-            val days = due?.let { it.toEpochDays() - today.toEpochDays() } ?: 0
+            val days = vaccine.daysUntilDue(today) ?: 0
             (if (days == 0) "Due today" else "Due in $days ${if (days == 1) "day" else "days"}") to wellness.okay
         }
         VaccineStatus.UP_TO_DATE -> "Up to date" to wellness.good
@@ -920,7 +920,7 @@ private fun RecordRow(record: HealthDocument, today: LocalDate, onClick: () -> U
                     maxLines = 1,
                 )
             }
-            if (next != null) StatusPill(next.status(today), next.nextDue, today)
+            if (next != null) StatusPill(next, today)
         }
     }
 }

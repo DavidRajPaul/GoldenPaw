@@ -62,6 +62,7 @@ import com.goldenpaw.domain.model.ActivityKind
 import com.goldenpaw.domain.model.Badge
 import com.goldenpaw.domain.model.Species
 import com.goldenpaw.domain.model.SymptomType
+import com.goldenpaw.domain.model.DocumentType
 
 /*
  * One place that maps app concepts to Material Symbols (Rounded). The UI never shows emoji: icons
@@ -144,6 +145,15 @@ val ActivityKind.icon: ImageVector
         ActivityKind.CHECK_IN -> Icons.Rounded.Mood
         ActivityKind.SYMPTOM -> Icons.Rounded.EditNote
         ActivityKind.WEIGHT -> Icons.Rounded.MonitorWeight
+    }
+
+val DocumentType.icon: ImageVector
+    get() = when (this) {
+        DocumentType.VACCINE_CARD -> Icons.Rounded.Vaccines
+        DocumentType.VET_CARD -> Icons.Rounded.LocalHospital
+        DocumentType.PRESCRIPTION -> Icons.Rounded.Medication
+        DocumentType.LAB_REPORT -> Icons.Rounded.MonitorHeart
+        DocumentType.OTHER -> Icons.Rounded.Description
     }
 
 /** An icon on a soft circular tint: the app's replacement for "big emoji" moments. */

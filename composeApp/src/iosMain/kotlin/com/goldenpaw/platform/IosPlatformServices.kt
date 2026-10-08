@@ -7,6 +7,7 @@ import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 import platform.UIKit.UIWindowScene
+import platform.UIKit.popoverPresentationController
 
 /** Topmost view controller, for presenting share sheets. */
 internal fun topViewController(): UIViewController? {

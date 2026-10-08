@@ -24,13 +24,18 @@ import kotlinx.coroutines.sync.withLock
  * Resolves "who is caring for whom" for the rest of the app:
  * which household a pet belongs to, who is logging on this device, and what they're allowed to do.
  */
+/** Who is logging something right now ("given by", "logged by"). Narrow so screens can be tested with a fake. */
+interface CareAttribution {
+    suspend fun attributionFor(petId: String): Attribution
+}
+
 class CareTeamService(
     private val households: HouseholdRepository,
     private val pets: PetRepository,
     private val settings: SettingsRepository,
     private val auth: CloudAuthRepository,
     private val clock: AppClock,
-) {
+) : CareAttribution {
     private val setupMutex = Mutex()
 
     /**
@@ -112,7 +117,7 @@ class CareTeamService(
     }
 
     /** Who to credit for something logged now for [petId]. */
-    suspend fun attributionFor(petId: String): Attribution {
+    override suspend fun attributionFor(petId: String): Attribution {
         val me = teamForPet(petId)?.me
         if (me != null) return me.attribution
         val name = settings.current().ownerName
