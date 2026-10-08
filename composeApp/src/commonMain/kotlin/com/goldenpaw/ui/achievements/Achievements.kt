@@ -55,6 +55,9 @@ import com.goldenpaw.ui.designsystem.StreakDots
 import com.goldenpaw.ui.designsystem.rememberStaggerState
 import com.goldenpaw.ui.designsystem.staggerIn
 import com.goldenpaw.ui.navigation.LocalAppActions
+import com.goldenpaw.ui.designsystem.GpIcons
+import com.goldenpaw.ui.designsystem.IconBadge
+import com.goldenpaw.ui.designsystem.icon
 
 fun BadgeTier.color(): Color = when (this) {
     BadgeTier.BRONZE -> Color(0xFFC98B5B)
@@ -73,7 +76,7 @@ fun AchievementsScreen() {
         if (g == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 EmptyState(
-                    "🌿",
+                    GpIcons.Growth,
                     "Gentle mode is on",
                     "Streaks, levels and badges are hidden. You can turn them back on in Settings.",
                 )
@@ -123,7 +126,12 @@ private fun AchievementsContent(g: GamificationState, padding: PaddingValues) {
             GpCard(modifier = Modifier.staggerIn(stagger, "streak", 1)) {
                 val s = g.streak
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (s.graduated) "🏅" else "🔥", style = MaterialTheme.typography.displaySmall)
+                    IconBadge(
+                        if (s.graduated) GpIcons.Graduated else GpIcons.Streak,
+                        size = 52.dp,
+                        container = MaterialTheme.colorScheme.tertiaryContainer,
+                        content = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
@@ -196,7 +204,7 @@ private fun AchievementsContent(g: GamificationState, padding: PaddingValues) {
 @Composable
 private fun BadgeTile(b: BadgeProgress, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        BadgeMedallion(b.badge.emoji, unlocked = b.unlocked, tierColor = b.badge.tier.color())
+        BadgeMedallion(b.badge.icon, unlocked = b.unlocked, tierColor = b.badge.tier.color())
         Spacer(Modifier.height(6.dp))
         Text(
             b.badge.title,
@@ -237,7 +245,7 @@ fun BadgeCelebrationDialog(badges: List<Badge>, onDismiss: () -> Unit, onSeeAll:
             Box(contentAlignment = Alignment.Center) {
                 CelebrationBurst(trigger = first.id, modifier = Modifier.width(220.dp).height(160.dp))
                 BadgeMedallion(
-                    first.emoji,
+                    first.icon,
                     unlocked = true,
                     tierColor = first.tier.color(),
                     size = 88.dp,
@@ -251,7 +259,7 @@ fun BadgeCelebrationDialog(badges: List<Badge>, onDismiss: () -> Unit, onSeeAll:
         title = { Text(if (badges.size == 1) first.title else "${badges.size} new badges", textAlign = TextAlign.Center) },
         text = {
             Text(
-                if (badges.size == 1) first.description else badges.joinToString(" · ") { "${it.emoji} ${it.title}" },
+                if (badges.size == 1) first.description else badges.joinToString(" · ") { it.title },
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )

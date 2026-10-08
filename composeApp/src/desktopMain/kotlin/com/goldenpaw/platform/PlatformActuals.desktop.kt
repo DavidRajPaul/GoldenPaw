@@ -47,7 +47,7 @@ actual fun rememberPhotoPicker(onPicked: (String?) -> Unit): () -> Unit {
     }
 }
 
-private fun downscale(source: File, dir: File, maxSize: Int = 1280): String? {
+internal fun downscale(source: File, dir: File, maxSize: Int = 1280): String? {
     val image = ImageIO.read(source) ?: return null
     val scale = minOf(1.0, maxSize.toDouble() / max(image.width, image.height))
     val w = (image.width * scale).toInt().coerceAtLeast(1)

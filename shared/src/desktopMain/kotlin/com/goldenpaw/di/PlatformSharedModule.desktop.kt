@@ -12,6 +12,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 import org.koin.core.module.Module
 import org.koin.dsl.module
 import java.io.File
+import com.goldenpaw.report.DocumentCanvasFactory
 
 actual val platformSharedModule: Module = module {
     single<AppFiles> { DesktopAppFiles() }
@@ -21,4 +22,5 @@ actual val platformSharedModule: Module = module {
     }
     single<HttpClientEngine> { OkHttp.create() }
     single { ReportCanvasFactory { SimplePdfCanvas() } }
+    single { DocumentCanvasFactory { SimplePdfCanvas() } }
 }

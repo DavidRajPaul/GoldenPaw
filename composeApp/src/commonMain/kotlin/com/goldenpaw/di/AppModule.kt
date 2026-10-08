@@ -21,11 +21,16 @@ import org.koin.core.KoinApplication
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
+import com.goldenpaw.ui.records.PetRecordsViewModel
+import com.goldenpaw.ui.records.RecordDetailViewModel
+import com.goldenpaw.ui.records.RecordEditorViewModel
 
 /**
  * Platform pieces the UI layer needs:
  *  - com.goldenpaw.domain.repository.ReminderGateway (AlarmManager / UNUserNotificationCenter / tray timer)
  *  - com.goldenpaw.platform.PlatformServices
+ *  - com.goldenpaw.platform.PageImageProcessor
+ *  - com.goldenpaw.domain.repository.DocumentTextReader
  */
 expect val platformAppModule: Module
 
@@ -44,6 +49,9 @@ val appModule = module {
     viewModelOf(::PetDetailViewModel)
     viewModelOf(::PetEditorViewModel)
     viewModelOf(::VetVisitEditorViewModel)
+    viewModelOf(::RecordEditorViewModel)
+    viewModelOf(::RecordDetailViewModel)
+    viewModelOf(::PetRecordsViewModel)
     viewModelOf(::CareTeamViewModel)
     viewModelOf(::QuickLogViewModel)
     viewModelOf(::SettingsViewModel)

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import com.goldenpaw.domain.model.HealthDocument
 
 interface PetRepository {
     fun observeActivePets(): Flow<List<Pet>>
@@ -90,6 +91,16 @@ interface VetVisitRepository {
     suspend fun get(id: String): VetVisit?
     suspend fun forPetBetween(petId: String, from: Instant, to: Instant): List<VetVisit>
     suspend fun upsert(visit: VetVisit)
+    suspend fun delete(id: String)
+}
+
+/** Scanned vet / vaccine cards and other health records. */
+interface HealthDocumentRepository {
+    fun observeForPet(petId: String): Flow<List<HealthDocument>>
+    /** Every record for pets that aren't archived (for vaccine due dates on Today). */
+    fun observeForActivePets(): Flow<List<HealthDocument>>
+    suspend fun get(id: String): HealthDocument?
+    suspend fun upsert(document: HealthDocument)
     suspend fun delete(id: String)
 }
 

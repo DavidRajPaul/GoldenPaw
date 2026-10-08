@@ -12,10 +12,19 @@ import java.io.File
 import java.util.UUID
 import kotlin.math.max
 
-/** Copies a picked photo into app-private storage, downscaled to ~1280 px and EXIF-rotated. */
-suspend fun importPhoto(context: Context, uri: Uri, maxSize: Int = 1280): String? = withContext(Dispatchers.IO) {
+/**
+ * Copies a picked photo into app-private storage, downscaled to ~[maxSize] px and EXIF-rotated (so
+ * the saved JPEG is upright with no orientation tag, which the PDF writer relies on).
+ */
+suspend fun importPhoto(
+    context: Context,
+    uri: Uri,
+    maxSize: Int = 1280,
+    dir: File = File(context.filesDir, "photos"),
+    quality: Int = 85,
+): String? = withContext(Dispatchers.IO) {
     runCatching {
-        val dir = File(context.filesDir, "photos").apply { mkdirs() }
+        dir.mkdirs()
         val resolver = context.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
@@ -43,7 +52,7 @@ suspend fun importPhoto(context: Context, uri: Uri, maxSize: Int = 1280): String
         }
         val output = if (matrix.isIdentity) decoded else Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
         val file = File(dir, "${UUID.randomUUID()}.jpg")
-        file.outputStream().use { output.compress(Bitmap.CompressFormat.JPEG, 85, it) }
+        file.outputStream().use { output.compress(Bitmap.CompressFormat.JPEG, quality, it) }
         if (output !== decoded) decoded.recycle()
         file.absolutePath
     }.getOrNull()

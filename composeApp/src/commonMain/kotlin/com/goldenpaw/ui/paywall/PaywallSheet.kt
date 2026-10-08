@@ -36,15 +36,18 @@ import androidx.compose.ui.unit.sp
 import com.goldenpaw.ui.designsystem.LocalReduceMotion
 import com.goldenpaw.ui.designsystem.Pill
 import kotlin.math.absoluteValue
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.goldenpaw.ui.designsystem.GpIcons
+import com.goldenpaw.ui.designsystem.IconBadge
 
 
-private data class PlusFeature(val emoji: String, val title: String, val body: String)
+private data class PlusFeature(val icon: ImageVector, val title: String, val body: String)
 
 private val features = listOf(
-    PlusFeature("🐾", "Every pet in the family", "Track as many dogs and cats as you care for, each with their own meds and history."),
-    PlusFeature("✨", "Weekly summaries", "A short, kind write-up of each week with things worth asking your vet. Not veterinary advice."),
-    PlusFeature("☁️", "Cloud backup", "Restore everything on a new phone. Your history is never lost."),
-    PlusFeature("📊", "Deeper trends", "Longer history and side-by-side symptom and quality-of-life trends."),
+    PlusFeature(GpIcons.Pet, "Every pet in the family", "Track as many dogs and cats as you care for, each with their own meds and history."),
+    PlusFeature(GpIcons.Sparkle, "Weekly summaries", "A short, kind write-up of each week with things worth asking your vet. Not veterinary advice."),
+    PlusFeature(GpIcons.Cloud, "Cloud backup", "Restore everything on a new phone. Your history is never lost."),
+    PlusFeature(GpIcons.Insights, "Deeper trends", "Longer history and side-by-side symptom and quality-of-life trends."),
 )
 
 private enum class Plan(val label: String, val price: String, val detail: String) {
@@ -107,9 +110,9 @@ fun PaywallSheet(
                     },
                 ) {
                     Column(Modifier.padding(20.dp)) {
-                        Text(
-                            feature.emoji,
-                            fontSize = 34.sp,
+                        IconBadge(
+                            feature.icon,
+                            size = 52.dp,
                             modifier = Modifier.graphicsLayer { if (!reduceMotion) translationX = offset * 60f },
                         )
                         Spacer(Modifier.height(10.dp))
@@ -121,7 +124,7 @@ fun PaywallSheet(
 
             Spacer(Modifier.height(16.dp))
             if (unlocked) {
-                Pill("Plus unlocked for this beta 🎉")
+                Pill("Plus unlocked for this beta")
                 Spacer(Modifier.height(10.dp))
                 Text(
                     "Thanks for trying Plus. Billing isn't connected in this test build, so nothing will be charged.",

@@ -79,6 +79,8 @@ import com.goldenpaw.ui.navigation.LocalAppActions
 import com.goldenpaw.ui.navigation.Route
 import com.goldenpaw.ui.navigation.sharedPetPhoto
 import org.koin.compose.viewmodel.koinViewModel
+import com.goldenpaw.ui.designsystem.GpIcons
+import com.goldenpaw.ui.records.HealthRecordsSection
 
 
 // ------------------------------------------------------------------ List
@@ -107,7 +109,7 @@ fun PetsScreen() {
     ) { padding ->
         if (!state.loading && state.active.isEmpty() && state.archived.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                EmptyState("🐕", "No pets yet", "Add your companion to get started.") {
+                EmptyState(GpIcons.Pet, "No pets yet", "Add your companion to get started.") {
                     Button(onClick = addPet) { Text("Add a pet") }
                 }
             }
@@ -296,6 +298,9 @@ fun PetDetailScreen(petId: String) {
                     onOpen = { v -> actions.navigate(Route.VetVisitEdit(pet.id, v.id)) },
                     onToggle = vm::toggleVisitDone,
                 )
+            }
+            item(key = "records") {
+                HealthRecordsSection(petId = pet.id, canScan = !pet.isArchived)
             }
             state.team?.let { team ->
                 item(key = "team") {

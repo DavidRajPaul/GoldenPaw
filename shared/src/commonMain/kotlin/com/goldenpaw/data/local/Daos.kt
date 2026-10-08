@@ -501,6 +501,32 @@ interface VetVisitDao {
     suspend fun markHouseholdPending(householdId: String)
 }
 
+@Dao
+interface HealthDocumentDao {
+    @Query("SELECT * FROM health_documents WHERE petId = :petId AND deletedAt IS NULL ORDER BY COALESCE(issuedEpochDay, createdAt / 86400000) DESC, createdAt DESC")
+    fun observeForPet(petId: String): Flow<List<HealthDocumentEntity>>
+
+    @Query(
+        """
+        SELECT d.* FROM health_documents d INNER JOIN pets p ON p.id = d.petId
+        WHERE d.deletedAt IS NULL AND p.deletedAt IS NULL AND p.archivedAt IS NULL
+        """,
+    )
+    fun observeForActivePets(): Flow<List<HealthDocumentEntity>>
+
+    @Query("SELECT * FROM health_documents WHERE id = :id")
+    suspend fun get(id: String): HealthDocumentEntity?
+
+    @Query("SELECT * FROM health_documents WHERE deletedAt IS NULL")
+    suspend fun all(): List<HealthDocumentEntity>
+
+    @Upsert
+    suspend fun upsert(document: HealthDocumentEntity)
+
+    @Query("UPDATE health_documents SET deletedAt = :at, updatedAt = :at, syncState = 'pending' WHERE id = :id")
+    suspend fun softDelete(id: String, at: Long)
+}
+
 /** Wipes everything (used by "Delete all data"). Children first, then parents. */
 @Dao
 interface MaintenanceDao {
@@ -511,6 +537,7 @@ interface MaintenanceDao {
     @Query("DELETE FROM symptom_entries") suspend fun clearSymptoms()
     @Query("DELETE FROM weekly_summaries") suspend fun clearSummaries()
     @Query("DELETE FROM vet_visits") suspend fun clearVetVisits()
+    @Query("DELETE FROM health_documents") suspend fun clearHealthDocuments()
     @Query("DELETE FROM pets") suspend fun clearPets()
     @Query("DELETE FROM caregivers") suspend fun clearCaregivers()
     @Query("DELETE FROM households") suspend fun clearHouseholds()

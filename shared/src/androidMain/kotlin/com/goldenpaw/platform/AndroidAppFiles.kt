@@ -9,6 +9,7 @@ class AndroidAppFiles(context: Context) : AppFiles {
     override val dataDir: String get() = app.filesDir.absolutePath
     override val cacheDir: String get() = app.cacheDir.absolutePath
     override val photosDir: String get() = File(app.filesDir, "photos").apply { mkdirs() }.absolutePath
+    override val documentsDir: String get() = File(app.filesDir, "documents").apply { mkdirs() }.absolutePath
 
     override fun exists(path: String?): Boolean = !path.isNullOrBlank() && File(path).exists()
 
@@ -24,4 +25,6 @@ class AndroidAppFiles(context: Context) : AppFiles {
         file.parentFile?.mkdirs()
         file.writeBytes(bytes)
     }
+
+    override fun readBytes(path: String): ByteArray? = runCatching { File(path).readBytes() }.getOrNull()
 }

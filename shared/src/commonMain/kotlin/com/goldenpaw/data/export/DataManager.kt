@@ -42,7 +42,7 @@ class DataManager(
         val root = buildJsonObject {
             put("app", "GoldenPaw")
             put("exportedAt", clock.now().toEpochMilliseconds())
-            put("schemaVersion", 2)
+            put("schemaVersion", 3)
             put("households", JsonArray(db.householdDao().all().map {
                 obj("id" to it.id, "name" to it.name, "cloudEnabled" to it.cloudEnabled, "createdAt" to it.createdAt)
             }))
@@ -97,6 +97,14 @@ class DataManager(
                     "loggedBy" to s.loggedBy,
                 )
             }))
+            put("healthRecords", JsonArray(db.healthDocumentDao().all().map { d ->
+                obj(
+                    "id" to d.id, "petId" to d.petId, "type" to d.type, "title" to d.title,
+                    "issuedEpochDay" to d.issuedEpochDay, "clinic" to d.clinic, "vetName" to d.vetName,
+                    "notes" to d.notes, "vaccines" to d.vaccines, "pageCount" to decodePageCount(d.pages),
+                    "recognizedText" to d.recognizedText, "createdAt" to d.createdAt,
+                )
+            }))
         }
         val dir = "${files.cacheDir}/exports"
         files.deleteRecursively(dir)
@@ -105,6 +113,9 @@ class DataManager(
         path
     }
 
+    private fun decodePageCount(raw: String): Int =
+        runCatching { Json.parseToJsonElement(raw).let { it as JsonArray }.size }.getOrDefault(0)
+
     /** Deletes every local record, photo and preference ("delete my data" for this device). */
     suspend fun deleteEverything() = withContext(Dispatchers.IO) {
         runCatching { auth.signOut() }
@@ -112,6 +123,7 @@ class DataManager(
         m.clearDoseEvents()
         m.clearSummaries()
         m.clearVetVisits()
+        m.clearHealthDocuments()
         m.clearCheckIns()
         m.clearWeights()
         m.clearSymptoms()
@@ -122,6 +134,7 @@ class DataManager(
         m.clearAchievements()
         m.clearSettings()
         files.deleteRecursively(files.photosDir)
+        files.deleteRecursively(files.documentsDir)
         files.deleteRecursively("${files.cacheDir}/reports")
         files.deleteRecursively("${files.cacheDir}/exports")
     }

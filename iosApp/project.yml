@@ -6,8 +6,8 @@ options:
     iOS: "16.0"
 settings:
   base:
-    MARKETING_VERSION: "1.1.0"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "1.2.0"
+    CURRENT_PROJECT_VERSION: "3"
     DEVELOPMENT_TEAM: ""   # set your Apple team id to run on a device
 targets:
   iosApp:
@@ -22,7 +22,8 @@ targets:
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        NSPhotoLibraryUsageDescription: "Choose a photo of your pet or of a symptom to show your vet."
+        NSPhotoLibraryUsageDescription: "Choose a photo of your pet, a symptom, or a vet or vaccine card."
+        NSCameraUsageDescription: "Scan your pet's vet and vaccine cards. The camera is only used while you scan, and pages stay on this device."
         CADisableMinimumFrameDurationOnPhone: true
         ITSAppUsesNonExemptEncryption: false
     settings:

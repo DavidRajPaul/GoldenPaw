@@ -177,7 +177,7 @@ private fun StepBasics(state: PetEditorState, onPickPhoto: () -> Unit, vm: PetEd
                 selected = state.species == sp,
                 onClick = { vm.update { it.copy(species = sp, breed = if (it.species != sp) "" else it.breed) } },
                 shape = SegmentedButtonDefaults.itemShape(i, Species.entries.size),
-            ) { Text("${sp.emoji} ${sp.label}") }
+            ) { Text(sp.label) }
         }
     }
     OutlinedTextField(

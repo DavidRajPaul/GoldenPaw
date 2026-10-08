@@ -11,16 +11,17 @@
 ![Compose](https://img.shields.io/badge/Compose%20Multiplatform-1.8-4285F4?logo=jetpackcompose&logoColor=white)
 ![Architecture](https://img.shields.io/badge/architecture-Clean%20%2B%20MVI-C8862A)
 ![Offline first](https://img.shields.io/badge/offline-first-6F8F6A)
-![Status](https://img.shields.io/badge/status-v1.1%20beta-B5654A)
+![Status](https://img.shields.io/badge/status-v1.2%20beta-B5654A)
 
 </div>
 
 ---
 
-GoldenPaw helps owners of **aging and chronically ill dogs and cats** handle the daily work of care: complex medication schedules, mobility and pain tracking, a recognised quality-of-life score, a symptom journal and a **one-tap, vet-ready PDF report**. Version 1.1 adds **shared care** for families and sitters, a **home-screen widget**, **weekly summaries**, **gentle gamification**, and runs on **Android, iOS and Desktop** from one Kotlin codebase.
+GoldenPaw helps owners of **aging and chronically ill dogs and cats** handle the daily work of care: complex medication schedules, mobility and pain tracking, a recognised quality-of-life score, a symptom journal and a **one-tap, vet-ready PDF report**. Version 1.1 added **shared care** for families and sitters, a **home-screen widget**, **weekly summaries**, **gentle gamification**, and runs on **Android, iOS and Desktop** from one Kotlin codebase. Version 1.2 adds **vet and vaccine card scanning** that turns a paper card into a tidy PDF and a proper entry with due-date reminders, plus a redesigned, more animated UI.
 
 ## Contents
 
+- [What's new in 1.2](#-whats-new-in-12)
 - [What's new in 1.1](#-whats-new-in-11)
 - [Features](#-features)
 - [Architecture](#-architecture)
@@ -31,6 +32,16 @@ GoldenPaw helps owners of **aging and chronically ill dogs and cats** handle the
 - [Disclaimer](#-disclaimer)
 
 ---
+
+## 🆕 What's new in 1.2
+
+| Area | What you get |
+|---|---|
+| 📷 **Vet & vaccine card scanning** | **Scan with camera** (permission asked only when you tap it) or **choose from gallery** (Photo Picker / PHPicker, no library permission). Android uses Google's ML Kit document scanner and iOS uses VisionKit: edge detection, perspective correction and multi-page capture. Review pages: rotate, **Enhance** (grey, higher contrast for faded stamps), reorder, delete, add more. |
+| 🔤 **On-device reading** | ML Kit (Android) and Vision (iOS) read the card **on the phone**: nothing is uploaded and there's no per-scan cost. A parser rebuilds table rows and pre-fills vaccines (incl. Indian brands like Megavac, Canigen, Rabisin, Defensor), given and next-due dates, batch numbers, clinic and vet. You confirm every field. |
+| 📄 **Proper PDF** | A4 PDF with a summary page (pet, clinic, vet, vaccine table with status dots, notes) followed by every scanned page. Send it to any vet or kennel from the record screen. |
+| 💉 **Due dates that act** | Vaccines and deworming due within 30 days (or overdue) show on **Today**; one switch adds them as vet visits with the evening-before reminder. The vet report now includes a **Vaccinations & preventives** section. |
+| ✨ **UX** | Choreographed splash, orbiting tutorial with live permission status, floating "liquid" bottom bar, collapsing sticky Today header, Material icons instead of emoji, and permission fixes on all three platforms. |
 
 ## 🆕 What's new in 1.1
 
@@ -51,6 +62,7 @@ GoldenPaw helps owners of **aging and chronically ill dogs and cats** handle the
 - **🌤 Daily check-in:** 30-second HHHHHMM quality-of-life check-in, good-day calendar and 30-day trend.
 - **📖 Symptom journal** with photos, severity, tags and pattern detection.
 - **⚖️ Weight tracking** stored in kg, shown in your unit.
+- **🗂 Health records:** scan vet cards, vaccine cards, prescriptions and lab reports into PDFs with structured entries and vaccine due dates.
 - **📄 Vet-ready PDF** made on the device (Android uses the system PDF engine; iOS and Desktop use a built-in pure-Kotlin PDF writer).
 - **🐕 Pet profiles, memories** and a quiet memorial space.
 - **🔒 Private by default:** everything lives on the device until you turn on sharing.
@@ -124,8 +136,9 @@ docs/                    TESTING.md, MARKET_RESEARCH_2.md
 - [x] AI weekly journal summaries (Plus, with a "not veterinary advice" disclaimer)
 - [x] Kotlin Multiplatform: shared domain and data, Compose Multiplatform UI, iOS and Desktop targets
 - [x] Gentle gamification and vet visits
+- [x] Vet / vaccine card scanning with on-device text recognition, PDF records and vaccine due dates
 - [ ] Billing (RevenueCat) for GoldenPaw Plus
-- [ ] Photo sync (Supabase Storage), realtime updates, push notifications when a teammate gives a dose
+- [ ] Photo and record sync (Supabase Storage), realtime updates, push notifications when a teammate gives a dose
 - [ ] Vet expense tracking, HCPI pain and cognitive (CCDR) assessments, iOS widget
 - [ ] Baseline Profile, crash reporting, analytics
 

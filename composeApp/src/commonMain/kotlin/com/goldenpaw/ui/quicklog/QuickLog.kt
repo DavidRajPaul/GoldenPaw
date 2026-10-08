@@ -77,6 +77,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import org.koin.compose.viewmodel.koinViewModel
+import com.goldenpaw.ui.designsystem.GpIcons
+import com.goldenpaw.ui.designsystem.icon
 
 data class QuickLogState(
     val pet: Pet? = null,
@@ -226,8 +228,16 @@ fun QuickLogSheet(onDismiss: () -> Unit) {
                 OutlinedButton(
                     onClick = { onDismiss(); actions.navigate(Route.CheckIn(pet.id)) },
                     modifier = Modifier.weight(1f),
-                ) { Text(if (state.checkedInToday) "Edit check-in" else "🙂 Check-in") }
-                OutlinedButton(onClick = { weightOpen = true }, modifier = Modifier.weight(1f)) { Text("⚖️ Weight") }
+                ) {
+                    Icon(GpIcons.CheckIn, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (state.checkedInToday) "Edit check-in" else "Check-in")
+                }
+                OutlinedButton(onClick = { weightOpen = true }, modifier = Modifier.weight(1f)) {
+                    Icon(GpIcons.Weight, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Weight")
+                }
             }
 
             Text("Noticed something?", style = MaterialTheme.typography.titleSmall)
@@ -235,9 +245,18 @@ fun QuickLogSheet(onDismiss: () -> Unit) {
                 SymptomType.quick.forEach { type ->
                     AssistChip(
                         onClick = { haptics.tick(); vm.symptom(type) },
-                        label = { Text("${type.emoji} ${type.label}") },
+                        label = { Text(type.label) },
+                        leadingIcon = { Icon(type.icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
                     )
                 }
+            }
+            OutlinedButton(
+                onClick = { onDismiss(); actions.navigate(Route.RecordScan(pet.id)) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(GpIcons.Scan, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Scan a vet or vaccine card")
             }
             TextButton(onClick = { onDismiss(); actions.navigate(Route.SymptomEdit(pet.id)) }) {
                 Text("Add details, a photo or something else")

@@ -31,6 +31,11 @@ interface ReportCanvas {
     fun strokeRect(left: Float, top: Float, right: Float, bottom: Float, color: Int, width: Float = 1f)
     fun fillCircle(cx: Float, cy: Float, radius: Float, color: Int)
     fun polyline(points: List<Pair<Float, Float>>, color: Int, width: Float)
+    /**
+     * Draws a JPEG scaled into the given box (callers keep the aspect ratio, see [JpegInfo]).
+     * JPEGs are embedded as-is where the writer can (DCTDecode), so scanned pages stay small.
+     */
+    fun image(jpeg: ByteArray, left: Float, top: Float, right: Float, bottom: Float)
     /** Finishes the document and returns the PDF bytes. */
     fun finish(): ByteArray
 }
@@ -41,16 +46,23 @@ class SimplePdfCanvas(
     override val pageHeight: Float = 842f,
 ) : ReportCanvas {
 
-    private val pages = mutableListOf<String>()
+    private class Page(val content: String, val images: List<Int>)
+    private class Image(val bytes: ByteArray, val info: JpegInfo)
+
+    private val pages = mutableListOf<Page>()
+    private val images = mutableListOf<Image>()
     private var current: StringBuilder? = null
+    private val currentImages = mutableListOf<Int>()
 
     override fun beginPage() {
         current = StringBuilder()
+        currentImages.clear()
     }
 
     override fun endPage() {
-        current?.let { pages += it.toString() }
+        current?.let { pages += Page(it.toString(), currentImages.toList()) }
         current = null
+        currentImages.clear()
     }
 
     private val out: StringBuilder get() = current ?: StringBuilder().also { current = it }
@@ -125,36 +137,67 @@ class SimplePdfCanvas(
         out.append("S\n0 J 0 j\n")
     }
 
+    override fun image(jpeg: ByteArray, left: Float, top: Float, right: Float, bottom: Float) {
+        val info = JpegInfo.read(jpeg) ?: return
+        val index = images.size
+        images += Image(jpeg, info)
+        currentImages += index
+        // Unit square scaled to the box; PDF's origin is bottom-left.
+        out.append("q\n${n(right - left)} 0 0 ${n(bottom - top)} ${n(left)} ${n(yFlip(bottom))} cm\n/Im$index Do\nQ\n")
+    }
+
     override fun finish(): ByteArray {
         if (current != null) endPage()
-        if (pages.isEmpty()) pages += ""
-        val objects = mutableListOf<String>()
-        // 1 catalog, 2 pages, 3-5 fonts, then (page, content) pairs
-        val firstPageObj = 6
+        if (pages.isEmpty()) pages += Page("", emptyList())
+        // Object numbers: 1 catalog, 2 pages, 3-5 fonts, then one per image, then (page, content) pairs.
+        val firstImageObj = 6
+        val firstPageObj = firstImageObj + images.size
         val kids = pages.indices.joinToString(" ") { "${firstPageObj + it * 2} 0 R" }
-        objects += "<< /Type /Catalog /Pages 2 0 R >>"
-        objects += "<< /Type /Pages /Kids [ $kids ] /Count ${pages.size} >>"
-        objects += "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
-        objects += "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"
-        objects += "<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>"
-        pages.forEachIndexed { i, content ->
-            val contentObj = firstPageObj + i * 2 + 1
-            objects += "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${n(pageWidth)} ${n(pageHeight)}] " +
-                "/Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents $contentObj 0 R >>"
-            objects += "<< /Length ${content.length} >>\nstream\n$content\nendstream"
-        }
-        val sb = StringBuilder("%PDF-1.4\n")
+
+        val out = PdfBytes()
         val offsets = mutableListOf<Int>()
-        objects.forEachIndexed { index, body ->
-            offsets += sb.length
-            sb.append("${index + 1} 0 obj\n").append(body).append("\nendobj\n")
+        fun obj(body: String) {
+            offsets += out.size
+            out.append("${offsets.size} 0 obj\n").append(body).append("\nendobj\n")
         }
-        val xrefOffset = sb.length
-        sb.append("xref\n0 ${objects.size + 1}\n0000000000 65535 f \n")
-        offsets.forEach { sb.append(it.toString().padStart(10, '0')).append(" 00000 n \n") }
-        sb.append("trailer\n<< /Size ${objects.size + 1} /Root 1 0 R >>\nstartxref\n$xrefOffset\n%%EOF\n")
-        // Everything above is ASCII (text is octal-escaped), so string length == byte length.
-        return sb.toString().encodeToByteArray()
+        out.append("%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n".let { header -> header.map { it.code.toByte() }.toByteArray() })
+        obj("<< /Type /Catalog /Pages 2 0 R >>")
+        obj("<< /Type /Pages /Kids [ $kids ] /Count ${pages.size} >>")
+        obj("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>")
+        obj("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>")
+        obj("<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>")
+        images.forEach { image ->
+            offsets += out.size
+            val info = image.info
+            val colorSpace = when (info.components) {
+                1 -> "/DeviceGray"
+                4 -> "/DeviceCMYK /Decode [1 0 1 0 1 0 1 0]" // Adobe CMYK JPEGs are stored inverted
+                else -> "/DeviceRGB"
+            }
+            out.append("${offsets.size} 0 obj\n")
+            out.append(
+                "<< /Type /XObject /Subtype /Image /Width ${info.width} /Height ${info.height} " +
+                    "/ColorSpace $colorSpace /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.size} >>\nstream\n",
+            )
+            out.append(image.bytes)
+            out.append("\nendstream\nendobj\n")
+        }
+        pages.forEachIndexed { i, page ->
+            val contentObj = firstPageObj + i * 2 + 1
+            val xobjects = if (page.images.isEmpty()) "" else
+                " /XObject << " + page.images.joinToString(" ") { "/Im$it ${firstImageObj + it} 0 R" } + " >>"
+            obj(
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${n(pageWidth)} ${n(pageHeight)}] " +
+                    "/Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>$xobjects >> /Contents $contentObj 0 R >>",
+            )
+            // Content streams are ASCII (text is octal-escaped), so string length == byte length.
+            obj("<< /Length ${page.content.length} >>\nstream\n${page.content}\nendstream")
+        }
+        val xrefOffset = out.size
+        out.append("xref\n0 ${offsets.size + 1}\n0000000000 65535 f \n")
+        offsets.forEach { out.append(it.toString().padStart(10, '0')).append(" 00000 n \n") }
+        out.append("trailer\n<< /Size ${offsets.size + 1} /Root 1 0 R >>\nstartxref\n$xrefOffset\n%%EOF\n")
+        return out.toByteArray()
     }
 
     /** WinAnsi literal string with escapes; characters outside the encoding become "?". */
@@ -184,6 +227,28 @@ class SimplePdfCanvas(
             '™' to 0x99,
         )
     }
+}
+
+/** Growable byte buffer for the PDF writer (binary JPEG streams sit next to ASCII objects). */
+internal class PdfBytes {
+    private var buffer = ByteArray(64 * 1024)
+    var size: Int = 0
+        private set
+
+    fun append(text: String): PdfBytes = append(text.encodeToByteArray())
+
+    fun append(bytes: ByteArray): PdfBytes {
+        if (size + bytes.size > buffer.size) {
+            var capacity = buffer.size * 2
+            while (capacity < size + bytes.size) capacity *= 2
+            buffer = buffer.copyOf(capacity)
+        }
+        bytes.copyInto(buffer, size)
+        size += bytes.size
+        return this
+    }
+
+    fun toByteArray(): ByteArray = buffer.copyOf(size)
 }
 
 /** Helvetica advance widths (1/1000 em) for ASCII 32..126, from the standard Adobe AFM files. */

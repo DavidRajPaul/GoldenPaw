@@ -92,6 +92,7 @@ import com.goldenpaw.ui.designsystem.WellnessRing
 import com.goldenpaw.ui.navigation.LocalAppActions
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.roundToInt
+import com.goldenpaw.ui.designsystem.GpIcons
 
 @Composable
 fun InsightsScreen() {
@@ -126,7 +127,7 @@ fun InsightsScreen() {
         if (state.pet == null) {
             if (!state.loading) {
                 Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    EmptyState("📈", "No insights yet", "Add a pet and do a few check-ins to see trends here.")
+                    EmptyState(GpIcons.Insights, "No insights yet", "Add a pet and do a few check-ins to see trends here.")
                 }
             }
             return@Scaffold

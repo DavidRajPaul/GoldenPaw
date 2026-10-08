@@ -121,6 +121,26 @@ import com.goldenpaw.ui.navigation.Route
 import kotlinx.datetime.LocalDate
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.roundToInt
+import com.goldenpaw.ui.designsystem.GpIcons
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
+import com.goldenpaw.domain.model.Pet
+import kotlin.math.PI
+import kotlin.math.sin
+import com.goldenpaw.ui.records.PetRecordsViewModel
+import com.goldenpaw.ui.records.VaccineDueCard
 
 @Composable
 fun TodayScreen() {
@@ -153,8 +173,27 @@ fun TodayScreen() {
     }
 
     val pet = state.pet
+    // Vaccine / treatment due dates from scanned cards for the selected pet.
+    val recordsVm: PetRecordsViewModel = koinViewModel()
+    LaunchedEffect(pet?.id) { pet?.id?.let(recordsVm::load) }
+    val records by recordsVm.state.collectAsStateWithLifecycle()
     val fabExpanded by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 } }
+    val headerBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
+        modifier = Modifier.nestedScroll(headerBehavior.nestedScrollConnection),
+        topBar = {
+            if (!state.loading && pet != null) {
+                StickyTodayHeader(
+                    scrollBehavior = headerBehavior,
+                    greeting = vm.greeting(),
+                    ownerName = state.team?.me?.displayName ?: state.ownerName,
+                    dateLabel = state.today?.let { Fmt.weekdayDayMonth(it) }.orEmpty(),
+                    pet = pet,
+                    team = state.team,
+                    onWho = { switcherOpen = true },
+                )
+            }
+        },
         snackbarHost = { SnackbarHost(snackbar) },
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
@@ -180,7 +219,7 @@ fun TodayScreen() {
         if (pet == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 EmptyState(
-                    emoji = "🐾",
+                    icon = GpIcons.Pet,
                     title = "Let's add your companion",
                     body = "Add your dog or cat to start tracking medications, good days and everything in between.",
                 ) {
@@ -201,15 +240,6 @@ fun TodayScreen() {
             ),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            item(key = "header", contentType = "header") {
-                Header(
-                    greeting = vm.greeting(),
-                    ownerName = state.team?.me?.displayName ?: state.ownerName,
-                    dateLabel = Fmt.weekdayDayMonth(today),
-                    team = state.team,
-                    onWho = { switcherOpen = true },
-                )
-            }
             if (state.pets.size > 1) {
                 item(key = "pets", contentType = "pets") {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -279,6 +309,17 @@ fun TodayScreen() {
                             }
                         }
                     }
+                }
+            }
+            if (records.due.isNotEmpty()) {
+                item(key = "vaccines-due", contentType = "vaccines") {
+                    VaccineDueCard(
+                        petName = pet.name,
+                        due = records.due,
+                        today = today,
+                        onOpen = { d -> actions.navigate(Route.RecordDetail(pet.id, d.documentId)) },
+                        modifier = Modifier.animateItem(),
+                    )
                 }
             }
             if (state.refills.isNotEmpty()) {
@@ -459,28 +500,107 @@ fun TodayScreen() {
     }
 }
 
+private val HeaderExpandedHeight = 112.dp
+private val HeaderCollapsedHeight = 64.dp
+
+/**
+ * Pinned Today header (M3 exit-until-collapsed): 112 dp → 64 dp as the list scrolls. The date fades
+ * out, the greeting scales down, a mini pet avatar pops in and the bar picks up a tint and a shadow.
+ * The behaviour snaps fully open or closed when the user lets go. Every scroll-driven value is read
+ * in layout / draw / graphics-layer lambdas, so scrolling never recomposes the header.
+ */
 @Composable
-private fun Header(greeting: String, ownerName: String, dateLabel: String, team: CareTeam?, onWho: () -> Unit) {
-    Row(Modifier.padding(top = 8.dp).statusBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(dateLabel.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+private fun StickyTodayHeader(
+    scrollBehavior: TopAppBarScrollBehavior,
+    greeting: String,
+    ownerName: String,
+    dateLabel: String,
+    pet: Pet,
+    team: CareTeam?,
+    onWho: () -> Unit,
+) {
+    val state = scrollBehavior.state
+    val density = LocalDensity.current
+    val expandedPx = with(density) { HeaderExpandedHeight.toPx() }
+    val collapsedPx = with(density) { HeaderCollapsedHeight.toPx() }
+    SideEffect {
+        val limit = collapsedPx - expandedPx
+        if (state.heightOffsetLimit != limit) state.heightOffsetLimit = limit
+    }
+    val restColor = MaterialTheme.colorScheme.background
+    val pinnedColor = MaterialTheme.colorScheme.surfaceContainer
+    val reduce = LocalReduceMotion.current
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                shadowElevation = state.collapsedFraction * 6.dp.toPx()
+                shape = RectangleShape
+                clip = false
+            }
+            .drawBehind { drawRect(lerp(restColor, pinnedColor, state.collapsedFraction)) }
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .layout { measurable, constraints ->
+                val height = (expandedPx + state.heightOffset).roundToInt().coerceIn(collapsedPx.roundToInt(), expandedPx.roundToInt())
+                val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+                layout(placeable.width, height) { placeable.place(0, 0) }
+            }
+            .padding(horizontal = 20.dp),
+    ) {
+        Text(
+            dateLabel.uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 18.dp)
+                .graphicsLayer { alpha = (1f - state.collapsedFraction * 2.2f).coerceIn(0f, 1f) },
+        )
+        Row(
+            Modifier.align(Alignment.BottomStart).fillMaxWidth().height(HeaderCollapsedHeight),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
                 if (ownerName.isBlank()) "$greeting." else "$greeting, $ownerName.",
                 style = MaterialTheme.typography.headlineMedium,
+                maxLines = 1,
+                modifier = Modifier
+                    .weight(1f)
+                    .graphicsLayer {
+                        val f = state.collapsedFraction
+                        val s = 1f - 0.24f * f
+                        scaleX = s
+                        scaleY = s
+                        transformOrigin = TransformOrigin(0f, 0.5f)
+                    },
             )
-        }
-        val me = team?.me
-        if (team != null) {
-            Surface(
-                onClick = onWho,
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            // Mini avatar pops in as the header collapses (with a little overshoot).
+            Box(
+                Modifier
+                    .padding(end = 8.dp)
+                    .graphicsLayer {
+                        val f = ((state.collapsedFraction - 0.35f) / 0.65f).coerceIn(0f, 1f)
+                        val pop = if (reduce) f else f + 0.18f * sin(f * PI.toFloat())
+                        scaleX = pop
+                        scaleY = pop
+                        alpha = f
+                    },
             ) {
-                Row(Modifier.padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CaregiverAvatar(me, size = 32.dp, fallbackName = ownerName)
-                    val others = team.activeMembers.size - 1
-                    if (others > 0) {
-                        Text("+$others", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 6.dp))
+                PetAvatar(pet.photoPath, pet.species, size = 36.dp)
+            }
+            if (team != null) {
+                Surface(
+                    onClick = onWho,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Row(Modifier.padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        CaregiverAvatar(team.me, size = 32.dp, fallbackName = ownerName)
+                        val others = team.activeMembers.size - 1
+                        if (others > 0) {
+                            Text("+$others", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 6.dp))
+                        }
                     }
                 }
             }

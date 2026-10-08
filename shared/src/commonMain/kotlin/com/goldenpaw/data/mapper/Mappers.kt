@@ -50,6 +50,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.put
+import com.goldenpaw.data.local.HealthDocumentEntity
+import com.goldenpaw.domain.model.DocumentType
+import com.goldenpaw.domain.model.HealthDocument
+import com.goldenpaw.domain.model.VaccineRecord
+import kotlinx.serialization.json.longOrNull
 
 private val json = Json { ignoreUnknownKeys = true }
 private const val SEP = "|"
@@ -397,6 +402,71 @@ fun VetVisit.toEntity(now: Long, createdAtMillis: Long = createdAt.toEpochMillis
     at = at.toEpochMilliseconds(),
     notes = notes.trim(),
     completed = completed,
+    loggedBy = loggedBy.name,
+    loggedById = loggedBy.caregiverId,
+    createdAt = createdAtMillis,
+    updatedAt = now,
+    deletedAt = null,
+    syncState = SyncState.PENDING,
+)
+
+// ---------- Health documents (scanned vet / vaccine cards) ----------
+internal fun encodeVaccines(values: List<VaccineRecord>): String = buildJsonArray {
+    values.forEach { v ->
+        add(buildJsonObject {
+            put("name", v.name)
+            put("given", v.givenOn?.epochDay())
+            put("due", v.nextDue?.epochDay())
+            put("batch", v.batch)
+        })
+    }
+}.toString()
+
+internal fun decodeVaccines(raw: String): List<VaccineRecord> {
+    if (raw.isBlank()) return emptyList()
+    return runCatching {
+        json.parseToJsonElement(raw).jsonArray.map { el ->
+            val obj = el.jsonObject
+            VaccineRecord(
+                name = obj["name"]?.jsonPrimitive?.content.orEmpty(),
+                givenOn = obj["given"]?.jsonPrimitive?.longOrNull?.let { localDateOfEpochDay(it) },
+                nextDue = obj["due"]?.jsonPrimitive?.longOrNull?.let { localDateOfEpochDay(it) },
+                batch = obj["batch"]?.jsonPrimitive?.content.orEmpty(),
+            )
+        }
+    }.getOrDefault(emptyList())
+}
+
+fun HealthDocumentEntity.toDomain() = HealthDocument(
+    id = id,
+    petId = petId,
+    type = DocumentType.from(type),
+    title = title,
+    issuedOn = issuedEpochDay?.let { localDateOfEpochDay(it) },
+    clinic = clinic,
+    vetName = vetName,
+    notes = notes,
+    vaccines = decodeVaccines(vaccines),
+    pagePaths = decodeStrings(pages),
+    pdfPath = pdfPath,
+    recognizedText = recognizedText,
+    createdAt = createdAt.instant(),
+    loggedBy = Attribution(loggedBy, loggedById),
+)
+
+fun HealthDocument.toEntity(now: Long, createdAtMillis: Long = createdAt.toEpochMilliseconds()) = HealthDocumentEntity(
+    id = id,
+    petId = petId,
+    type = type.name,
+    title = title.trim(),
+    issuedEpochDay = issuedOn?.epochDay(),
+    clinic = clinic.trim(),
+    vetName = vetName.trim(),
+    notes = notes.trim(),
+    vaccines = encodeVaccines(vaccines.filter { it.name.isNotBlank() }.map { it.copy(name = it.name.trim(), batch = it.batch.trim()) }),
+    pages = encodeStrings(pagePaths),
+    pdfPath = pdfPath,
+    recognizedText = recognizedText,
     loggedBy = loggedBy.name,
     loggedById = loggedBy.caregiverId,
     createdAt = createdAtMillis,

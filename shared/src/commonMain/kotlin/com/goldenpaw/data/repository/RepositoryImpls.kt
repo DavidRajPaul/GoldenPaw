@@ -39,6 +39,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import com.goldenpaw.data.local.HealthDocumentDao
+import com.goldenpaw.domain.model.HealthDocument
+import com.goldenpaw.domain.repository.HealthDocumentRepository
 
 /** Stable id for "this pet's check-in on this day", so two devices checking in converge on one row. */
 fun checkInId(petId: String, date: LocalDate): String = "$petId:${date.epochDay()}"
@@ -244,6 +247,25 @@ class VetVisitRepositoryImpl(private val dao: VetVisitDao, private val clock: Ap
     override suspend fun upsert(visit: VetVisit) {
         val existing = dao.get(visit.id)
         dao.upsert(visit.toEntity(now(), existing?.createdAt ?: visit.createdAt.toEpochMilliseconds()))
+    }
+
+    override suspend fun delete(id: String) = dao.softDelete(id, now())
+}
+
+class HealthDocumentRepositoryImpl(private val dao: HealthDocumentDao, private val clock: AppClock) : HealthDocumentRepository {
+    private fun now() = clock.now().toEpochMilliseconds()
+
+    override fun observeForPet(petId: String): Flow<List<HealthDocument>> =
+        dao.observeForPet(petId).map { list -> list.map { it.toDomain() } }
+
+    override fun observeForActivePets(): Flow<List<HealthDocument>> =
+        dao.observeForActivePets().map { list -> list.map { it.toDomain() } }
+
+    override suspend fun get(id: String): HealthDocument? = dao.get(id)?.takeIf { it.deletedAt == null }?.toDomain()
+
+    override suspend fun upsert(document: HealthDocument) {
+        val existing = dao.get(document.id)
+        dao.upsert(document.toEntity(now(), existing?.createdAt ?: document.createdAt.toEpochMilliseconds()))
     }
 
     override suspend fun delete(id: String) = dao.softDelete(id, now())

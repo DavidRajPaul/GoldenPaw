@@ -84,6 +84,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.animation.scaleOut
+import com.goldenpaw.ui.designsystem.ChoreographedSplash
+import com.goldenpaw.ui.navigation.GpBottomBar
+import com.goldenpaw.ui.records.RecordDetailScreen
+import com.goldenpaw.ui.records.RecordScanScreen
 
 /** App-scoped gamification state for any screen that wants it (null in gentle mode). */
 val LocalGamification = staticCompositionLocalOf<GamificationState?> { null }
@@ -125,60 +130,17 @@ fun GoldenPawApp(
                     AnimatedVisibility(
                         visible = !splashDone || !state.loaded,
                         enter = fadeIn(),
-                        exit = fadeOut(tween(Motion.MEDIUM4)),
+                        exit = if (reduceMotion) {
+                            fadeOut(tween(Motion.SHORT4))
+                        } else {
+                            fadeOut(tween(Motion.MEDIUM2, easing = Motion.EmphasizedAccelerate)) +
+                                scaleOut(tween(Motion.MEDIUM4, easing = Motion.EmphasizedDecelerate), targetScale = 1.08f)
+                        },
                     ) {
-                        PawSplash(onFinished = { splashDone = true })
+                        ChoreographedSplash(onFinished = { splashDone = true })
                     }
                 }
             }
-        }
-    }
-}
-
-/** Paw print "settles" into the logo with a soft spring, then the wordmark rises in. */
-@Composable
-private fun PawSplash(onFinished: () -> Unit) {
-    val reduceMotion = LocalReduceMotion.current
-    val scale = remember { Animatable(if (reduceMotion) 1f else 1.5f) }
-    val alpha = remember { Animatable(0f) }
-    val word = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        if (reduceMotion) {
-            alpha.animateTo(1f, tween(150)); word.snapTo(1f); delay(250)
-        } else {
-            launch { alpha.animateTo(1f, tween(350)) }
-            scale.animateTo(1f, Motion.settleSpring())
-            word.animateTo(1f, tween(Motion.MEDIUM2, easing = Motion.EmphasizedDecelerate))
-            delay(300)
-        }
-        onFinished()
-    }
-    Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
-        Column(
-            Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            PawMark(
-                Modifier.size(110.dp).graphicsLayer {
-                    scaleX = scale.value
-                    scaleY = scale.value
-                    this.alpha = alpha.value
-                    rotationZ = (scale.value - 1f) * -24f
-                },
-            )
-            Spacer(Modifier.height(18.dp))
-            Text(
-                "GoldenPaw",
-                style = MaterialTheme.typography.headlineLarge,
-                modifier = Modifier.graphicsLayer { this.alpha = word.value; translationY = (1f - word.value) * 18f * density },
-            )
-            Text(
-                "Every good day, remembered.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.graphicsLayer { this.alpha = word.value },
-            )
         }
     }
 }
@@ -235,16 +197,7 @@ private fun AppContent(
                     enter = slideInVertically(Motion.spatialDefault()) { it } + fadeIn(),
                     exit = slideOutVertically(Motion.spatialFast()) { it } + fadeOut(),
                 ) {
-                    NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                        TopLevel.entries.forEach { item ->
-                            NavigationBarItem(
-                                selected = navigator.current.route == item.route,
-                                onClick = { navigator.switchTab(item.route) },
-                                icon = { Icon(item.icon, contentDescription = null) },
-                                label = { Text(item.label) },
-                            )
-                        }
-                    }
+                    GpBottomBar(current = navigator.current.route, onSelect = { navigator.switchTab(it) })
                 }
             },
             containerColor = MaterialTheme.colorScheme.background,
@@ -278,6 +231,8 @@ private fun AppContent(
                     is Route.CheckIn -> CheckInScreen(petId = route.petId)
                     is Route.SymptomEdit -> SymptomEditorScreen(petId = route.petId, entryId = route.entryId)
                     is Route.VetVisitEdit -> VetVisitEditorScreen(petId = route.petId, visitId = route.visitId)
+                    is Route.RecordScan -> RecordScanScreen(petId = route.petId, recordId = route.recordId)
+                    is Route.RecordDetail -> RecordDetailScreen(petId = route.petId, recordId = route.recordId)
                 }
             }
         }

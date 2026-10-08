@@ -50,6 +50,9 @@ import androidx.room.RoomDatabase
 import org.koin.core.module.Module
 import org.koin.dsl.bind
 import org.koin.dsl.module
+import com.goldenpaw.data.repository.HealthDocumentRepositoryImpl
+import com.goldenpaw.domain.repository.HealthDocumentRepository
+import com.goldenpaw.report.HealthRecordService
 
 /**
  * Platform pieces the shared module needs:
@@ -57,6 +60,7 @@ import org.koin.dsl.module
  *  - io.ktor.client.engine.HttpClientEngine
  *  - com.goldenpaw.domain.repository.AppFiles
  *  - com.goldenpaw.report.ReportCanvasFactory
+ *  - com.goldenpaw.report.DocumentCanvasFactory
  */
 expect val platformSharedModule: Module
 
@@ -76,6 +80,7 @@ val sharedModule = module {
     single { get<GoldenPawDatabase>().settingsDao() }
     single { get<GoldenPawDatabase>().achievementDao() }
     single { get<GoldenPawDatabase>().vetVisitDao() }
+    single { get<GoldenPawDatabase>().healthDocumentDao() }
     single { KeyValueStore(get()) }
 
     // Repositories
@@ -89,6 +94,7 @@ val sharedModule = module {
     single<SummaryRepository> { SummaryRepositoryImpl(get()) }
     single<AchievementRepository> { AchievementRepositoryImpl(get()) }
     single<VetVisitRepository> { VetVisitRepositoryImpl(get(), get()) }
+    single<HealthDocumentRepository> { HealthDocumentRepositoryImpl(get(), get()) }
     single<SettingsRepository> { SettingsRepositoryImpl(get()) }
 
     // Cloud (Supabase). With no keys configured these report isAvailable = false and the app stays local.
@@ -109,8 +115,9 @@ val sharedModule = module {
 
     // Data export, vet report
     single { DataManager(get(), get(), get(), get()) }
-    single { VetReportDataSource(get(), get(), get(), get(), get(), get()) }
+    single { VetReportDataSource(get(), get(), get(), get(), get(), get(), get()) }
     single { VetReportService(get(), get(), get()) }
+    single { HealthRecordService(get(), get(), get(), get(), get(), get()) }
 
     single { AppInitializer(get(), get(), get(), get()) }
 }

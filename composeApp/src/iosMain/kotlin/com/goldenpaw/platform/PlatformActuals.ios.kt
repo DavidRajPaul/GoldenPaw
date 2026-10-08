@@ -25,6 +25,9 @@ import platform.UIKit.UIImpactFeedbackGenerator
 import platform.UIKit.UINavigationControllerDelegateProtocol
 import platform.UIKit.UISelectionFeedbackGenerator
 import platform.darwin.NSObject
+import platform.Foundation.NSURL
+import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationOpenSettingsURLString
 
 @Composable
 actual fun rememberHaptics(): Haptics = remember {
@@ -35,8 +38,12 @@ actual fun rememberHaptics(): Haptics = remember {
     }
 }
 
+/**
+ * Redraws [image] upright (UIKit applies imageOrientation while drawing), downscaled to [maxSize],
+ * and writes it as a JPEG into [dir]. Safe off the main thread.
+ */
 @OptIn(ExperimentalForeignApi::class)
-private fun saveScaled(image: UIImage, dir: String, maxSize: Double = 1280.0): String? {
+internal fun saveScaled(image: UIImage, dir: String, maxSize: Double = 1280.0, quality: Double = 0.85): String? {
     val (w, h) = image.size.useContents { width to height }
     val scale = minOf(1.0, maxSize / maxOf(w, h))
     val target = CGSizeMake(w * scale, h * scale)
@@ -44,7 +51,7 @@ private fun saveScaled(image: UIImage, dir: String, maxSize: Double = 1280.0): S
     image.drawInRect(CGRectMake(0.0, 0.0, w * scale, h * scale))
     val scaled = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
-    val data = UIImageJPEGRepresentation(scaled ?: image, 0.85) ?: return null
+    val data = UIImageJPEGRepresentation(scaled ?: image, quality) ?: return null
     val path = "$dir/${NSUUID().UUIDString}.jpg"
     return if (data.writeToFile(path, atomically = true)) path else null
 }
@@ -83,10 +90,30 @@ actual fun rememberPhotoPicker(onPicked: (String?) -> Unit): () -> Unit {
     }
 }
 
+/**
+ * Prompts only while the status is "not determined" (iOS shows the dialog once, ever). Once denied,
+ * the button opens the app's page in Settings instead of silently doing nothing.
+ */
 @Composable
 actual fun rememberNotificationPermissionRequest(onResult: (Boolean) -> Unit): () -> Unit {
     val reminders: IosReminderScheduler = koinInject()
-    return { reminders.requestAuthorization(onResult) }
+    return {
+        reminders.readStatus { status ->
+            when (status) {
+                NotificationStatus.ALLOWED -> onResult(true)
+                NotificationStatus.NOT_DETERMINED -> reminders.requestAuthorization(onResult)
+                NotificationStatus.DENIED -> {
+                    openAppSettings()
+                    onResult(false)
+                }
+            }
+        }
+    }
+}
+
+internal fun openAppSettings() {
+    val url = NSURL.URLWithString(UIApplicationOpenSettingsURLString) ?: return
+    UIApplication.sharedApplication.openURL(url, options = emptyMap<Any?, Any>(), completionHandler = null)
 }
 
 @Composable

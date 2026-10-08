@@ -77,6 +77,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalTime
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
 
 class SettingsViewModel(
     private val settingsRepo: SettingsRepository,
@@ -121,14 +123,14 @@ fun SettingsScreen() {
     val platform = LocalPlatform.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var health by remember { mutableStateOf(ReminderHealth()) }
+    var health by remember { mutableStateOf(platform.reminderHealth()) }
     var editName by remember { mutableStateOf(false) }
     var pickTime by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
     var versionTaps by remember { mutableIntStateOf(0) }
 
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { health = platform.reminderHealth() }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { scope.launch { health = platform.loadReminderHealth() } }
 
     Scaffold(
         topBar = { GpTopBar("Settings") },
@@ -149,7 +151,7 @@ fun SettingsScreen() {
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     onClick = if (s.isPlus) null else ({ actions.showPaywall("Unlock everything GoldenPaw can do.") }),
                 ) {
-                    Text(if (s.isPlus) "GoldenPaw Plus ✨" else "GoldenPaw Free", style = MaterialTheme.typography.titleMedium)
+                    Text(if (s.isPlus) "GoldenPaw Plus" else "GoldenPaw Free", style = MaterialTheme.typography.titleMedium)
                     Text(
                         if (s.isPlus) "Plus is unlocked on this device for the beta. Billing isn't connected yet."
                         else "1 pet, reminders, check-ins, journal, care team and vet reports. Tap to see Plus.",
@@ -451,11 +453,12 @@ fun RemindersHealthScreen() {
     val platform = LocalPlatform.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var health by remember { mutableStateOf(ReminderHealth()) }
-    val requestPermission = rememberNotificationPermissionRequest { health = platform.reminderHealth() }
+    var health by remember { mutableStateOf(platform.reminderHealth()) }
+    val requestPermission = rememberNotificationPermissionRequest { scope.launch { health = platform.loadReminderHealth() } }
 
+    // Re-read the live status every time the user comes back (e.g. from the system settings page).
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        health = platform.reminderHealth()
+        scope.launch { health = platform.loadReminderHealth() }
         vm.reschedule()
     }
 
@@ -515,7 +518,18 @@ fun RemindersHealthScreen() {
                     Spacer(Modifier.height(10.dp))
                     Button(onClick = {
                         val ok = platform.sendTestNotification()
-                        scope.launch { snackbar.showSnackbar(if (ok) "Test sent" else "Notifications are blocked") }
+                        scope.launch {
+                            if (ok) {
+                                snackbar.showSnackbar("Test sent")
+                            } else {
+                                val result = snackbar.showSnackbar(
+                                    message = "Notifications are blocked",
+                                    actionLabel = "Settings",
+                                    duration = SnackbarDuration.Long,
+                                )
+                                if (result == SnackbarResult.ActionPerformed) platform.openNotificationSettings()
+                            }
+                        }
                     }) { Text("Send test") }
                 }
             }

@@ -14,6 +14,10 @@ androidxActivityCompose = "1.9.3"
 androidxWork = "2.10.0"
 androidxDatastore = "1.1.1"
 androidxGlance = "1.1.1"
+# On-device document scanner (edge detection, crop, multi-page) and text recognition, both served by
+# Google Play services (~300 KB in the APK; models download on first use / install).
+mlkitDocumentScanner = "16.0.0"
+mlkitTextRecognition = "19.0.0"
 
 room = "2.7.1"
 sqlite = "2.5.1"
@@ -32,6 +36,8 @@ androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidxDatastore" }
 androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "androidxGlance" }
 androidx-glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "androidxGlance" }
+mlkit-document-scanner = { module = "com.google.android.gms:play-services-mlkit-document-scanner", version.ref = "mlkitDocumentScanner" }
+mlkit-text-recognition = { module = "com.google.android.gms:play-services-mlkit-text-recognition", version.ref = "mlkitTextRecognition" }
 
 # Compose Multiplatform extras
 compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }

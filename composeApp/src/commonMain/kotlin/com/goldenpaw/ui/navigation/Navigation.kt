@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ShowChart
+import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.Settings
@@ -48,6 +48,11 @@ import com.goldenpaw.platform.PlatformBackHandler
 import com.goldenpaw.ui.designsystem.LocalReduceMotion
 import com.goldenpaw.ui.designsystem.Motion
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.rounded.Book
+import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.Pets
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.WbSunny
 
 // ------------------------------------------------------------------ Routes
 
@@ -69,14 +74,23 @@ sealed interface Route {
     data class CheckIn(val petId: String) : Route
     data class SymptomEdit(val petId: String, val entryId: String? = null) : Route
     data class VetVisitEdit(val petId: String, val visitId: String? = null) : Route
+    /** Scan a vet / vaccine card (new), or edit an existing record when [recordId] is set. */
+    data class RecordScan(val petId: String, val recordId: String? = null) : Route
+    data class RecordDetail(val petId: String, val recordId: String) : Route
 }
 
-enum class TopLevel(val route: Route, val label: String, val icon: ImageVector) {
-    TODAY(Route.Today, "Today", Icons.Outlined.WbSunny),
-    JOURNAL(Route.Journal, "Journal", Icons.Outlined.Book),
-    INSIGHTS(Route.Insights, "Insights", Icons.AutoMirrored.Outlined.ShowChart),
-    PETS(Route.Pets, "Pets", Icons.Outlined.Pets),
-    SETTINGS(Route.Settings, "Settings", Icons.Outlined.Settings),
+/** Bottom-bar destinations: outlined icon at rest, filled when selected. */
+enum class TopLevel(val route: Route, val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
+    TODAY(Route.Today, "Today", Icons.Outlined.WbSunny, Icons.Rounded.WbSunny),
+    JOURNAL(Route.Journal, "Journal", Icons.Outlined.Book, Icons.Rounded.Book),
+    INSIGHTS(Route.Insights, "Insights", Icons.Outlined.Insights, Icons.Rounded.Insights),
+    PETS(Route.Pets, "Pets", Icons.Outlined.Pets, Icons.Rounded.Pets),
+    SETTINGS(Route.Settings, "Settings", Icons.Outlined.Settings, Icons.Rounded.Settings),
+    ;
+
+    companion object {
+        fun of(route: Route): TopLevel? = entries.firstOrNull { it.route == route }
+    }
 }
 
 // ------------------------------------------------------------------ Back stack
@@ -109,6 +123,10 @@ class Navigator(start: Route) {
     var lastAction by mutableStateOf(NavAction.REPLACE)
         private set
 
+    /** +1 when the last tab switch moved right in the bottom bar, -1 when it moved left. */
+    var tabDirection by mutableStateOf(1)
+        private set
+
     val canGoBack: Boolean get() = entries.size > 1
     val isTopLevel: Boolean get() = TopLevel.entries.any { it.route == current.route }
 
@@ -128,6 +146,9 @@ class Navigator(start: Route) {
     /** Bottom-bar navigation: Today is always the root; other tabs sit on top of it. */
     fun switchTab(route: Route) {
         if (current.route == route && entries.size <= 2) return
+        val from = TopLevel.of(current.route)?.ordinal ?: 0
+        val to = TopLevel.of(route)?.ordinal ?: 0
+        tabDirection = if (to >= from) 1 else -1
         lastAction = NavAction.TAB
         val keepCurrent = current
         val removed = entries.filter { it !== keepCurrent && it.route != Route.Today }
@@ -224,7 +245,7 @@ fun NavHost(
         AnimatedContent(
             targetState = navigator.current,
             contentKey = { it.id },
-            transitionSpec = { transitionFor(navigator.lastAction, reduceMotion) },
+            transitionSpec = { transitionFor(navigator.lastAction, navigator.tabDirection, reduceMotion) },
             label = "nav",
         ) { entry ->
             DisposableEffect(entry) {
@@ -266,7 +287,7 @@ fun NavHost(
     }
 }
 
-private fun AnimatedContentTransitionScope<NavEntry>.transitionFor(action: NavAction, reduceMotion: Boolean): ContentTransform {
+private fun AnimatedContentTransitionScope<NavEntry>.transitionFor(action: NavAction, tabDirection: Int, reduceMotion: Boolean): ContentTransform {
     if (reduceMotion) return fadeIn(tween(150)) togetherWith fadeOut(tween(150))
     val predictive = initialState.backProgress > 0f
     return when (action) {
@@ -285,10 +306,12 @@ private fun AnimatedContentTransitionScope<NavEntry>.transitionFor(action: NavAc
                     (slideOutHorizontally(tween(Motion.MEDIUM2, easing = Motion.EmphasizedAccelerate)) { it / 4 } +
                         fadeOut(tween(Motion.SHORT4)))
             }.apply { targetContentZIndex = -1f }
+        // Direction-aware shared axis X: the new tab slides in from the side it sits on in the bar.
         NavAction.TAB ->
-            (fadeIn(tween(Motion.MEDIUM1, delayMillis = 90, easing = Motion.EmphasizedDecelerate)) +
-                scaleIn(tween(Motion.MEDIUM1, delayMillis = 90, easing = Motion.EmphasizedDecelerate), initialScale = 0.92f)) togetherWith
-                fadeOut(tween(90))
+            (slideInHorizontally(tween(Motion.MEDIUM2, easing = Motion.EmphasizedDecelerate)) { tabDirection * it / 6 } +
+                fadeIn(tween(Motion.MEDIUM1, delayMillis = 60, easing = Motion.EmphasizedDecelerate))) togetherWith
+                (slideOutHorizontally(tween(Motion.MEDIUM1, easing = Motion.EmphasizedAccelerate)) { -tabDirection * it / 8 } +
+                    fadeOut(tween(Motion.SHORT2)))
         NavAction.REPLACE -> fadeIn(tween(Motion.MEDIUM4)) togetherWith fadeOut(tween(Motion.SHORT4))
     }
 }

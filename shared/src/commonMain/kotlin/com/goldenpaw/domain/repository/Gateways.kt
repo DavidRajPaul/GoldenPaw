@@ -25,11 +25,30 @@ interface AppFiles {
     val dataDir: String
     val cacheDir: String
     val photosDir: String
+    /** Scanned health records: one folder per record (pages + PDF), plus an inbox for fresh captures. */
+    val documentsDir: String
     fun exists(path: String?): Boolean
     fun delete(path: String?): Boolean
     fun deleteRecursively(dir: String)
     fun writeBytes(path: String, bytes: ByteArray)
     fun writeText(path: String, text: String) = writeBytes(path, text.encodeToByteArray())
+    fun readBytes(path: String): ByteArray?
+}
+
+/**
+ * On-device text recognition for scanned records (ML Kit on Android, Vision on iOS). Nothing is
+ * uploaded. [isAvailable] is false where there's no engine (Desktop): the owner fills the form in.
+ */
+interface DocumentTextReader {
+    val isAvailable: Boolean
+    /** Recognised text of one page image, top-to-bottom, line by line ("" if nothing was found). */
+    suspend fun read(imagePath: String): String
+}
+
+/** Fallback when a platform has no text recognition. */
+object NoTextReader : DocumentTextReader {
+    override val isAvailable: Boolean = false
+    override suspend fun read(imagePath: String): String = ""
 }
 
 /** Email one-time-code sign in (Supabase Auth). Only used for sharing and cloud backup. */

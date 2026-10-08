@@ -110,6 +110,9 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import org.koin.compose.viewmodel.koinViewModel
+import com.goldenpaw.ui.designsystem.GpIcons
+import com.goldenpaw.ui.designsystem.IconBadge
+import com.goldenpaw.ui.designsystem.icon
 
 // ------------------------------------------------------------------ Journal
 
@@ -231,7 +234,7 @@ fun JournalScreen() {
         if (pet == null) {
             if (!state.loading) {
                 Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    EmptyState("📖", "Nothing here yet", "Add a pet first, then log symptoms as they happen.")
+                    EmptyState(GpIcons.Journal, "Nothing here yet", "Add a pet first, then log symptoms as they happen.")
                 }
             }
             return@Scaffold
@@ -251,7 +254,11 @@ fun JournalScreen() {
                         contentPadding = PaddingValues(14.dp),
                         modifier = Modifier.animateItem(),
                     ) {
-                        Text("${p.type.emoji}  ${p.message}", style = MaterialTheme.typography.titleSmall)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(p.type.icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(p.message, style = MaterialTheme.typography.titleSmall)
+                        }
                         Text(
                             "Patterns like this are worth mentioning to your vet. They're included in the vet report.",
                             style = MaterialTheme.typography.bodySmall,
@@ -264,7 +271,7 @@ fun JournalScreen() {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         item { FilterChip(selected = state.filter == null, onClick = { vm.setFilter(null) }, label = { Text("All") }) }
                         items(state.availableTypes) { t ->
-                            FilterChip(selected = state.filter == t, onClick = { vm.setFilter(t) }, label = { Text("${t.emoji} ${t.label}") })
+                            FilterChip(selected = state.filter == t, onClick = { vm.setFilter(t) }, label = { Text(t.label) }, leadingIcon = { Icon(t.icon, contentDescription = null, modifier = Modifier.size(18.dp)) })
                         }
                     }
                 }
@@ -272,7 +279,7 @@ fun JournalScreen() {
             if (state.groups.isEmpty()) {
                 item(key = "empty") {
                     EmptyState(
-                        "🌿",
+                        GpIcons.Growth,
                         "A quiet journal is a good sign",
                         "Log vomiting, limping, accidents or anything unusual. Photos help your vet too.",
                     )
@@ -297,13 +304,17 @@ fun JournalScreen() {
                                 actions.navigate(Route.SymptomEdit(pet.id, item.entry.id))
                             }
                             is JournalItem.Note -> GpCard(contentPadding = PaddingValues(14.dp), modifier = mod) {
-                                Text("📝 Check-in note", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(GpIcons.Journal, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Check-in note", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                                 Text(item.checkIn.notes, style = MaterialTheme.typography.bodyMedium)
                                 AttributionLine(item.checkIn.loggedBy, state.team)
                             }
                             is JournalItem.Weight -> GpCard(contentPadding = PaddingValues(14.dp), modifier = mod) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("⚖️", fontSize = 20.sp)
+                                    IconBadge(GpIcons.Weight, size = 36.dp, container = MaterialTheme.colorScheme.surfaceContainerHigh, content = MaterialTheme.colorScheme.primary)
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text("Weighed ${UnitConversion.format(item.entry.weightKg, state.weightUnit)}", style = MaterialTheme.typography.titleSmall)
@@ -336,7 +347,7 @@ private fun SymptomCard(entry: SymptomEntry, team: CareTeam?, modifier: Modifier
             Box(
                 Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center,
-            ) { Text(entry.type.emoji, fontSize = 22.sp) }
+            ) { Icon(entry.type.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -495,7 +506,7 @@ fun SymptomEditorScreen(petId: String, entryId: String?) {
                 options = SymptomType.entries.toList(),
                 selected = { it == form.type },
                 onToggle = { t -> vm.update { it.copy(type = t) } },
-                label = { "${it.emoji} ${it.label}" },
+                label = { it.label },
             )
             Text("How severe?", style = MaterialTheme.typography.titleMedium)
             SeverityPicker(value = form.severity, onValue = { v -> vm.update { it.copy(severity = v) } })

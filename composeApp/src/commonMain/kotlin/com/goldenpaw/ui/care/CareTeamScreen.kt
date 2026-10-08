@@ -89,6 +89,7 @@ import com.goldenpaw.ui.designsystem.rememberStaggerState
 import com.goldenpaw.ui.navigation.LocalAppActions
 import kotlinx.datetime.LocalTime
 import org.koin.compose.viewmodel.koinViewModel
+import com.goldenpaw.ui.designsystem.icon
 
 @Composable
 fun CareTeamScreen() {
@@ -398,7 +399,9 @@ private fun ActivityRow(a: CareActivity, modifier: Modifier = Modifier) {
     val clock = LocalAppClock.current
     val today = rememberToday()
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(a.kind.emoji, style = MaterialTheme.typography.titleLarge, modifier = Modifier.width(36.dp))
+        Box(Modifier.width(36.dp)) {
+            Icon(a.kind.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+        }
         Column(Modifier.weight(1f)) {
             Text(a.title, style = MaterialTheme.typography.bodyMedium)
             val when_ = "${Formats.relativeDay(a.at.toLocalDate(clock.zone()), today)} · ${Formats.time(a.at)}"

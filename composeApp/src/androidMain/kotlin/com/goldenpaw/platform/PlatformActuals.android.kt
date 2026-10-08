@@ -33,6 +33,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.net.Uri
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
 
 @Composable
 actual fun rememberHaptics(): Haptics {
@@ -64,20 +71,75 @@ actual fun rememberPhotoPicker(onPicked: (String?) -> Unit): () -> Unit {
     return { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 }
 
-@Composable
-actual fun rememberNotificationPermissionRequest(onResult: (Boolean) -> Unit): () -> Unit {
-    val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> onResult(granted) }
-    return {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            onResult(true)
+/** Walks ContextWrappers up to the hosting Activity (needed for permission rationale checks). */
+internal fun Context.findActivity(): Activity? {
+    var c: Context? = this
+    while (c is ContextWrapper) {
+        if (c is Activity) return c
+        c = c.baseContext
+    }
+    return null
+}
+
+internal fun openAppNotificationSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    val ok = runCatching { context.startActivity(intent) }.isSuccess
+    if (!ok) {
+        runCatching {
+            context.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
         }
     }
 }
+
+private const val PERMISSION_PREFS = "goldenpaw_permissions"
+
+/**
+ * Android only shows the POST_NOTIFICATIONS dialog twice. After the second "Don't allow" the request
+ * returns "denied" instantly with no UI, which made the Allow button look broken. We remember that we
+ * asked; once the system won't prompt any more (asked before and no rationale is offered), or the
+ * app's notifications are switched off in settings, we open the app's notification settings instead.
+ */
+@Composable
+actual fun rememberNotificationPermissionRequest(onResult: (Boolean) -> Unit): () -> Unit {
+    val context = LocalContext.current
+    val prefs = remember(context) { context.getSharedPreferences(PERMISSION_PREFS, Context.MODE_PRIVATE) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        onResult(granted && NotificationManagerCompat.from(context).areNotificationsEnabled())
+    }
+    return {
+        val needsRuntimePermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        val granted = !needsRuntimePermission ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        val enabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
+        when {
+            granted && enabled -> onResult(true)
+            granted -> {
+                openAppNotificationSettings(context)
+                onResult(false)
+            }
+            else -> {
+                val activity = context.findActivity()
+                val askedBefore = prefs.getBoolean(KEY_ASKED_NOTIFICATIONS, false)
+                val canPrompt = activity != null &&
+                    (!askedBefore || ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.POST_NOTIFICATIONS))
+                if (canPrompt) {
+                    prefs.edit().putBoolean(KEY_ASKED_NOTIFICATIONS, true).apply()
+                    launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    openAppNotificationSettings(context)
+                    onResult(false)
+                }
+            }
+        }
+    }
+}
+
+private const val KEY_ASKED_NOTIFICATIONS = "asked_post_notifications"
 
 @Composable
 actual fun PlatformBackHandler(

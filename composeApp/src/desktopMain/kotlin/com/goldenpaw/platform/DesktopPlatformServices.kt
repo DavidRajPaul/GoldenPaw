@@ -37,14 +37,14 @@ class DesktopPlatformServices(private val notifier: DesktopNotifier) : PlatformS
     }
 
     override fun reminderHealth() = ReminderHealth(
-        notifications = notifier.send != null,
+        notifications = notifier.available,
         exactAlarms = true,
         batteryUnrestricted = true,
         exactAlarmsApplicable = false,
         batteryApplicable = false,
     )
 
-    override fun openNotificationSettings() = Unit
+    override fun openNotificationSettings() = notifier.openSettings()
     override fun openExactAlarmSettings() = Unit
     override fun openBatterySettings() = Unit
 

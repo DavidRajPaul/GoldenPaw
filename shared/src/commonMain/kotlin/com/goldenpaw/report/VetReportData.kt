@@ -20,6 +20,9 @@ import com.goldenpaw.domain.repository.SymptomRepository
 import com.goldenpaw.domain.repository.WeightRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
+import com.goldenpaw.domain.model.HealthDocument
+import com.goldenpaw.domain.model.VaccineRecord
+import com.goldenpaw.domain.repository.HealthDocumentRepository
 
 data class ReportOptions(
     val from: LocalDate,
@@ -44,6 +47,8 @@ data class VetReportData(
     val generatedOn: LocalDate,
     /** Care-team members who logged doses in the period ("given by" column in the report). */
     val caregivers: List<String>,
+    /** Latest entry per vaccine / preventive from scanned cards (not limited to the period). */
+    val vaccinations: List<VaccineRecord> = emptyList(),
 )
 
 /** Gathers report data from repositories. */
@@ -54,6 +59,7 @@ class VetReportDataSource(
     private val checkIns: CheckInRepository,
     private val symptoms: SymptomRepository,
     private val clock: AppClock,
+    private val records: HealthDocumentRepository,
 ) {
     suspend fun load(pet: Pet, options: ReportOptions, unit: WeightUnit, ownerName: String): VetReportData {
         val zone = clock.zone()
@@ -78,6 +84,15 @@ class VetReportDataSource(
             ownerName = ownerName,
             generatedOn = clock.today(),
             caregivers = events.map { it.givenBy }.filter { it.isNotBlank() }.distinct(),
+            vaccinations = latestVaccinations(records.observeForPet(pet.id).first()),
         )
     }
+
+    /** One row per vaccine name: the most recent given (or due) date wins. */
+    private fun latestVaccinations(documents: List<HealthDocument>): List<VaccineRecord> =
+        documents.flatMap { it.vaccines }
+            .filter { it.name.isNotBlank() }
+            .groupBy { it.name.trim().lowercase() }
+            .map { (_, list) -> list.maxWith(compareBy<VaccineRecord, LocalDate?>(nullsFirst()) { it.givenOn ?: it.nextDue }) }
+            .sortedBy { it.name.lowercase() }
 }

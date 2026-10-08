@@ -12,6 +12,8 @@ import platform.Foundation.NSSearchPathDirectory
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.create
 import platform.Foundation.writeToFile
+import platform.Foundation.dataWithContentsOfFile
+import platform.posix.memcpy
 
 @OptIn(ExperimentalForeignApi::class)
 class IosAppFiles : AppFiles {
@@ -30,6 +32,7 @@ class IosAppFiles : AppFiles {
     override val dataDir: String get() = directory(NSDocumentDirectory)
     override val cacheDir: String get() = directory(NSCachesDirectory)
     override val photosDir: String get() = ensure("$dataDir/photos")
+    override val documentsDir: String get() = ensure("$dataDir/documents")
 
     override fun exists(path: String?): Boolean = !path.isNullOrBlank() && fm.fileExistsAtPath(path)
 
@@ -46,5 +49,13 @@ class IosAppFiles : AppFiles {
             NSData.create(bytes = pinned.addressOf(0), length = bytes.size.toULong())
         }
         data.writeToFile(path, true)
+    }
+
+    override fun readBytes(path: String): ByteArray? {
+        val data = NSData.dataWithContentsOfFile(path) ?: return null
+        val length = data.length.toInt()
+        if (length == 0) return ByteArray(0)
+        val source = data.bytes ?: return null
+        return ByteArray(length).apply { usePinned { pinned -> memcpy(pinned.addressOf(0), source, data.length) } }
     }
 }

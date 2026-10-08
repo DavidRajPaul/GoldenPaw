@@ -44,16 +44,19 @@ class IosPlatformServices(private val reminders: IosReminderScheduler) : Platfor
         UIApplication.sharedApplication.openURL(url, options = emptyMap<Any?, Any>(), completionHandler = null)
     }
 
-    override fun reminderHealth(): ReminderHealth {
-        reminders.refreshAuthorization()
-        return ReminderHealth(
-            notifications = reminders.authorized,
-            exactAlarms = true,
-            batteryUnrestricted = true,
-            exactAlarmsApplicable = false,
-            batteryApplicable = false,
-        )
-    }
+    private fun health(allowed: Boolean) = ReminderHealth(
+        notifications = allowed,
+        exactAlarms = true,
+        batteryUnrestricted = true,
+        exactAlarmsApplicable = false,
+        batteryApplicable = false,
+    )
+
+    /** Cached status (refreshed by [loadReminderHealth]); never prompts. */
+    override fun reminderHealth(): ReminderHealth = health(reminders.authorized)
+
+    /** Reads the real status with getNotificationSettings; the old check could pop the system dialog. */
+    override suspend fun loadReminderHealth(): ReminderHealth = health(reminders.status() == NotificationStatus.ALLOWED)
 
     override fun openNotificationSettings() {
         val url = NSURL.URLWithString(UIApplicationOpenSettingsURLString) ?: return

@@ -11,6 +11,7 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
 import org.koin.core.module.Module
 import org.koin.dsl.module
+import com.goldenpaw.report.DocumentCanvasFactory
 
 actual val platformSharedModule: Module = module {
     single<AppFiles> { IosAppFiles() }
@@ -20,4 +21,5 @@ actual val platformSharedModule: Module = module {
     }
     single<HttpClientEngine> { Darwin.create() }
     single { ReportCanvasFactory { SimplePdfCanvas() } }
+    single { DocumentCanvasFactory { SimplePdfCanvas() } }
 }

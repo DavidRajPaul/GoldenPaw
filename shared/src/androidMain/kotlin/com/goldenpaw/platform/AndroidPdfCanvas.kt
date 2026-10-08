@@ -10,6 +10,9 @@ import com.goldenpaw.report.ReportCanvas
 import com.goldenpaw.report.ReportFont
 import com.goldenpaw.report.ReportTextStyle
 import java.io.ByteArrayOutputStream
+import android.graphics.BitmapFactory
+import android.graphics.RectF
+import android.graphics.Bitmap
 
 /** [ReportCanvas] backed by Android's PdfDocument: real system fonts, full Unicode (any pet name). */
 class AndroidPdfCanvas(
@@ -103,11 +106,38 @@ class AndroidPdfCanvas(
         canvas.drawPath(path, shapePaint)
     }
 
+    private val imagePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+    /**
+     * PdfDocument can't pass JPEG bytes through, so the page is decoded at roughly 150 dpi for the
+     * target box (enough to read a vaccine sticker, small enough to share).
+     */
+    override fun image(jpeg: ByteArray, left: Float, top: Float, right: Float, bottom: Float) {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return
+        val targetWidth = ((right - left) / 72f * 150f).toInt().coerceAtLeast(1)
+        var sample = 1
+        while (bounds.outWidth / (sample * 2) >= targetWidth) sample *= 2
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sample
+            inPreferredConfig = Bitmap.Config.RGB_565
+        }
+        val bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size, options) ?: return
+        canvas.drawBitmap(bitmap, null, RectF(left, top, right, bottom), imagePaint)
+        // The page records draw commands; keep the bitmap alive until the document is written.
+        bitmaps += bitmap
+    }
+
+    private val bitmaps = mutableListOf<Bitmap>()
+
     override fun finish(): ByteArray {
         if (page != null) endPage()
         val out = ByteArrayOutputStream()
         document.writeTo(out)
         document.close()
+        bitmaps.forEach { it.recycle() }
+        bitmaps.clear()
         return out.toByteArray()
     }
 }

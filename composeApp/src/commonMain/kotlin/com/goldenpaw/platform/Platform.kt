@@ -33,7 +33,14 @@ interface PlatformServices {
     fun openFile(path: String, mimeType: String)
     fun dial(phone: String)
 
+    /** Last known status; cheap enough to call during composition. */
     fun reminderHealth(): ReminderHealth
+
+    /**
+     * Re-reads the live status from the OS (call on resume). Never shows a permission prompt.
+     * iOS can only read notification settings asynchronously, hence suspend.
+     */
+    suspend fun loadReminderHealth(): ReminderHealth = reminderHealth()
     fun openNotificationSettings()
     fun openExactAlarmSettings()
     fun openBatterySettings()
@@ -65,7 +72,12 @@ expect fun rememberHaptics(): Haptics
 @Composable
 expect fun rememberPhotoPicker(onPicked: (String?) -> Unit): () -> Unit
 
-/** Requests notification permission where it exists (Android 13+, iOS). */
+/**
+ * Asks for notification permission where it exists (Android 13+, iOS) — or, when the system will no
+ * longer show the prompt (denied twice on Android, denied once on iOS, or notifications switched
+ * off for the app), opens the app's notification settings instead so the button never looks dead.
+ * [onResult] receives whether notifications are allowed right now.
+ */
 @Composable
 expect fun rememberNotificationPermissionRequest(onResult: (Boolean) -> Unit): () -> Unit
 

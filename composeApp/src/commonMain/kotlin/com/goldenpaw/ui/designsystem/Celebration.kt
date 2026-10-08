@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -139,7 +141,14 @@ fun CareRingsView(rings: CareRings, modifier: Modifier = Modifier, size: Dp = 92
             ring(0f, dose.value, doseColor)
             ring(stroke * 1.35f, check.value, checkColor)
         }
-        if (rings.allClosed) Text("🐾", fontSize = (size.value * 0.22f).sp)
+        if (rings.allClosed) {
+            Icon(
+                GpIcons.Pet,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(size * 0.26f),
+            )
+        }
     }
 }
 
@@ -166,7 +175,7 @@ fun StreakDots(marks: List<DayMark>, modifier: Modifier = Modifier) {
 
 /** Big badge medallion used in the badge grid and the unlock dialog. */
 @Composable
-fun BadgeMedallion(emoji: String, unlocked: Boolean, tierColor: Color, modifier: Modifier = Modifier, size: Dp = 64.dp) {
+fun BadgeMedallion(icon: ImageVector, unlocked: Boolean, tierColor: Color, modifier: Modifier = Modifier, size: Dp = 64.dp) {
     Box(
         modifier
             .size(size)
@@ -178,7 +187,12 @@ fun BadgeMedallion(emoji: String, unlocked: Boolean, tierColor: Color, modifier:
             drawCircle(if (unlocked) tierColor.copy(alpha = 0.22f) else Color.Gray.copy(alpha = 0.18f))
             drawCircle(if (unlocked) tierColor else Color.Gray.copy(alpha = 0.5f), style = Stroke(this.size.minDimension * 0.06f))
         }
-        Text(emoji, fontSize = (size.value * 0.42f).sp)
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (unlocked) tierColor else Color.Gray,
+            modifier = Modifier.size(size * 0.48f),
+        )
     }
 }
 

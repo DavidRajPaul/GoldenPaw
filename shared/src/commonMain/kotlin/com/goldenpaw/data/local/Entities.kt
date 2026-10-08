@@ -11,7 +11,8 @@ import androidx.room.PrimaryKey
  * changes since the last sync. Dates are stored as epoch-day Longs, instants as epoch-millis Longs.
  *
  * Schema v2 (care teams, AI summaries, gamification). Columns added in v2 are listed in
- * [Migrations.MIGRATION_1_2]; keep the two in step.
+ * [Migrations.MIGRATION_1_2]; keep the two in step. Schema v3 adds `health_documents`
+ * ([Migrations.MIGRATION_2_3]).
  */
 
 object SyncState {
@@ -299,6 +300,42 @@ data class VetVisitEntity(
     val at: Long,
     val notes: String,
     val completed: Boolean,
+    val loggedBy: String,
+    val loggedById: String?,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val deletedAt: Long?,
+    val syncState: String,
+)
+
+/** Scanned vet / vaccine card (v3). Pages and PDF live as files; this row is the confirmed entry. */
+@Entity(
+    tableName = "health_documents",
+    foreignKeys = [
+        ForeignKey(
+            entity = PetEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["petId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("petId")],
+)
+data class HealthDocumentEntity(
+    @PrimaryKey val id: String,
+    val petId: String,
+    val type: String,
+    val title: String,
+    val issuedEpochDay: Long?,
+    val clinic: String,
+    val vetName: String,
+    val notes: String,
+    /** JSON array of {name, given, due, batch} (epoch days). */
+    val vaccines: String,
+    /** JSON array of app-private JPEG paths. */
+    val pages: String,
+    val pdfPath: String?,
+    val recognizedText: String,
     val loggedBy: String,
     val loggedById: String?,
     val createdAt: Long,

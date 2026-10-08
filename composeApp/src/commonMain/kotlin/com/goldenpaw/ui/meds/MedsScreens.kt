@@ -86,6 +86,8 @@ import com.goldenpaw.ui.navigation.Route
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.TimeZone
 import org.koin.compose.viewmodel.koinViewModel
+import com.goldenpaw.ui.designsystem.GpIcons
+import androidx.compose.material.icons.rounded.Lock
 
 
 // ------------------------------------------------------------------ List
@@ -112,7 +114,7 @@ fun MedsScreen(petId: String) {
     ) { padding ->
         if (!state.loading && state.active.isEmpty() && state.inactive.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                EmptyState("💊", "No medications yet", "Add a medication to get reminders, refill alerts and a dose history for your vet.")
+                EmptyState(GpIcons.Medication, "No medications yet", "Add a medication to get reminders, refill alerts and a dose history for your vet.")
             }
             return@Scaffold
         }
@@ -286,7 +288,7 @@ fun MedicationEditorScreen(petId: String, medId: String?) {
         if (form.loading) return@Scaffold
         if (!form.canEdit) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                EmptyState("🔒", "View only", "Only the owner and family members can add or change medications.")
+                EmptyState(Icons.Rounded.Lock, "View only", "Only the owner and family members can add or change medications.")
             }
             return@Scaffold
         }

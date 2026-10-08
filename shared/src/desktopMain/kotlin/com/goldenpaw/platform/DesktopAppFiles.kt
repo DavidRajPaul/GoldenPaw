@@ -19,6 +19,7 @@ class DesktopAppFiles : AppFiles {
     override val dataDir: String get() = root.absolutePath
     override val cacheDir: String get() = File(root, "cache").apply { mkdirs() }.absolutePath
     override val photosDir: String get() = File(root, "photos").apply { mkdirs() }.absolutePath
+    override val documentsDir: String get() = File(root, "documents").apply { mkdirs() }.absolutePath
 
     override fun exists(path: String?): Boolean = !path.isNullOrBlank() && File(path).exists()
 
@@ -34,4 +35,6 @@ class DesktopAppFiles : AppFiles {
         file.parentFile?.mkdirs()
         file.writeBytes(bytes)
     }
+
+    override fun readBytes(path: String): ByteArray? = runCatching { File(path).readBytes() }.getOrNull()
 }

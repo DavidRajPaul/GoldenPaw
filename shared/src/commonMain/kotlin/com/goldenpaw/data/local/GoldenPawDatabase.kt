@@ -25,8 +25,9 @@ import kotlinx.coroutines.IO
         SettingEntity::class,
         AchievementEntity::class,
         VetVisitEntity::class,
+        HealthDocumentEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @ConstructedBy(GoldenPawDatabaseConstructor::class)
@@ -43,6 +44,7 @@ abstract class GoldenPawDatabase : RoomDatabase() {
     abstract fun achievementDao(): AchievementDao
     abstract fun maintenanceDao(): MaintenanceDao
     abstract fun vetVisitDao(): VetVisitDao
+    abstract fun healthDocumentDao(): HealthDocumentDao
 
     companion object {
         const val NAME = "goldenpaw.db"
@@ -59,7 +61,7 @@ expect object GoldenPawDatabaseConstructor : RoomDatabaseConstructor<GoldenPawDa
 fun RoomDatabase.Builder<GoldenPawDatabase>.configure(): GoldenPawDatabase = this
     .setDriver(BundledSQLiteDriver())
     .setQueryCoroutineContext(Dispatchers.IO)
-    .addMigrations(Migrations.MIGRATION_1_2)
+    .addMigrations(Migrations.MIGRATION_1_2, Migrations.MIGRATION_2_3)
     .build()
 
 object Migrations {
@@ -122,6 +124,22 @@ object Migrations {
             connection.execSQL("CREATE INDEX IF NOT EXISTS `index_vet_visits_petId` ON `vet_visits` (`petId`)")
             // Everything from v1 is local-only; make sure nothing claims to be synced.
             connection.execSQL("UPDATE `pets` SET `syncState` = 'pending'")
+        }
+    }
+
+    /** v2 → v3: scanned vet / vaccine cards. Mirrors Room's generated SQL for [HealthDocumentEntity]. */
+    val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
+                "CREATE TABLE IF NOT EXISTS `health_documents` (`id` TEXT NOT NULL, `petId` TEXT NOT NULL, " +
+                    "`type` TEXT NOT NULL, `title` TEXT NOT NULL, `issuedEpochDay` INTEGER, `clinic` TEXT NOT NULL, " +
+                    "`vetName` TEXT NOT NULL, `notes` TEXT NOT NULL, `vaccines` TEXT NOT NULL, `pages` TEXT NOT NULL, " +
+                    "`pdfPath` TEXT, `recognizedText` TEXT NOT NULL, `loggedBy` TEXT NOT NULL, `loggedById` TEXT, " +
+                    "`createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `deletedAt` INTEGER, " +
+                    "`syncState` TEXT NOT NULL, PRIMARY KEY(`id`), " +
+                    "FOREIGN KEY(`petId`) REFERENCES `pets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_health_documents_petId` ON `health_documents` (`petId`)")
         }
     }
 }

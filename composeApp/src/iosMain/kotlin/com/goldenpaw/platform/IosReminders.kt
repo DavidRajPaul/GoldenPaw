@@ -40,6 +40,12 @@ import platform.UserNotifications.UNTimeIntervalNotificationTrigger
 import platform.UserNotifications.UNUserNotificationCenter
 import platform.UserNotifications.UNUserNotificationCenterDelegateProtocol
 import platform.darwin.NSObject
+import platform.UserNotifications.UNAuthorizationStatusDenied
+import platform.UserNotifications.UNAuthorizationStatusNotDetermined
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 private const val DOSE_PREFIX = "dose:"
 private const val CHECKIN_ID = "checkin"
@@ -60,8 +66,9 @@ class IosReminderScheduler(
     private val center get() = UNUserNotificationCenter.currentNotificationCenter()
     private val mutex = Mutex()
 
+    /** Last status read from the system. Starts false until [readStatus] has run once. */
     @kotlin.concurrent.Volatile
-    var authorized: Boolean = true
+    var authorized: Boolean = false
         private set
 
     fun registerCategories() {
@@ -73,20 +80,33 @@ class IosReminderScheduler(
         center.setNotificationCategories(setOf(category))
     }
 
+    /**
+     * Shows the system prompt. Only call when [readStatus] says NOT_DETERMINED: after the user has
+     * decided, iOS never shows it again. The callback is delivered on the main queue (UNUserNotificationCenter
+     * calls back on a background thread, and Compose state written there could be dropped).
+     */
     fun requestAuthorization(onResult: (Boolean) -> Unit) {
         center.requestAuthorizationWithOptions(UNAuthorizationOptionAlert or UNAuthorizationOptionSound or UNAuthorizationOptionBadge) { granted, _ ->
             authorized = granted
-            onResult(granted)
+            onMain { onResult(granted) }
         }
     }
 
-    /**
-     * Re-reads permission. Asking again once the user has decided returns the stored answer without
-     * a prompt (and avoids depending on how UNAuthorizationStatus is bridged).
-     */
-    fun refreshAuthorization() {
-        requestAuthorization { }
+    /** Reads the current permission without ever prompting. Callback on the main queue. */
+    fun readStatus(onResult: (NotificationStatus) -> Unit) {
+        center.getNotificationSettingsWithCompletionHandler { settings ->
+            val status = when (settings?.authorizationStatus) {
+                UNAuthorizationStatusNotDetermined -> NotificationStatus.NOT_DETERMINED
+                UNAuthorizationStatusDenied -> NotificationStatus.DENIED
+                null -> NotificationStatus.NOT_DETERMINED
+                else -> NotificationStatus.ALLOWED // authorized, provisional, ephemeral
+            }
+            authorized = status == NotificationStatus.ALLOWED
+            onMain { onResult(status) }
+        }
     }
+
+    suspend fun status(): NotificationStatus = suspendCoroutine { cont -> readStatus { cont.resume(it) } }
 
     override suspend fun rescheduleAll() = mutex.withLock {
         center.removeAllPendingNotificationRequests()
@@ -157,6 +177,12 @@ class IosReminderScheduler(
         )
         return authorized
     }
+}
+
+enum class NotificationStatus { NOT_DETERMINED, DENIED, ALLOWED }
+
+internal fun onMain(block: () -> Unit) {
+    dispatch_async(dispatch_get_main_queue()) { block() }
 }
 
 /**

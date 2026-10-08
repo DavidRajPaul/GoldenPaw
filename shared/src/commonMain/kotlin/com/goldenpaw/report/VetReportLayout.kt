@@ -12,6 +12,7 @@ import com.goldenpaw.domain.model.DoseSlot
 import com.goldenpaw.domain.model.PetSex
 import com.goldenpaw.domain.model.SlotState
 import kotlin.math.roundToInt
+import com.goldenpaw.domain.model.VaccineStatus
 
 /**
  * Lays out the A4 vet-ready report on any [ReportCanvas]. Same layout on every platform.
@@ -44,6 +45,7 @@ class VetReportLayout(private val canvas: ReportCanvas) {
         newPage()
         header(data)
         if (data.options.includeMeds) medications(data)
+        if (data.vaccinations.isNotEmpty()) vaccinations(data)
         if (data.options.includeQol) qualityOfLife(data)
         if (data.options.includeWeight) weight(data)
         if (data.options.includeSymptoms) symptoms(data)
@@ -142,6 +144,21 @@ class VetReportLayout(private val canvas: ReportCanvas) {
             canvas.text(k, margin, y, small)
             textLine(v, bodyBold, indent = 90f)
         }
+    }
+
+    private fun vaccinations(data: VetReportData) {
+        section("Vaccinations & preventives")
+        data.vaccinations.forEach { v ->
+            val status = when (v.status(data.generatedOn)) {
+                VaccineStatus.OVERDUE -> "  · overdue"
+                VaccineStatus.DUE_SOON -> "  · due soon"
+                else -> ""
+            }
+            val given = v.givenOn?.let { "given ${Fmt.dayMonthYear(it)}" }
+            val due = v.nextDue?.let { "next due ${Fmt.dayMonthYear(it)}" }
+            textLine(v.name + "  ·  " + listOfNotNull(given, due).joinToString(" · ").ifBlank { "no dates" } + status, body, gap = 14f)
+        }
+        textLine("From scanned vaccine cards; the original scans are kept in GoldenPaw.", small, gap = 12f)
     }
 
     private fun medications(data: VetReportData) {

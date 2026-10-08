@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -140,13 +141,13 @@ fun SectionHeader(
 
 @Composable
 fun EmptyState(
-    emoji: String,
+    icon: ImageVector,
     title: String,
     body: String,
     modifier: Modifier = Modifier,
     action: (@Composable () -> Unit)? = null,
 ) {
-    // A gentle float on the emoji makes empty screens feel alive without demanding attention.
+    // A gentle float on the icon makes empty screens feel alive without demanding attention.
     val reduce = LocalReduceMotion.current
     val float = if (reduce) null else rememberInfiniteTransition(label = "emptyFloat").animateFloat(
         initialValue = -4f,
@@ -159,7 +160,11 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(emoji, fontSize = 44.sp, modifier = Modifier.graphicsLayer { translationY = (float?.value ?: 0f) * density })
+        IconBadge(
+            icon,
+            size = 72.dp,
+            modifier = Modifier.graphicsLayer { translationY = (float?.value ?: 0f) * density },
+        )
         Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
         Text(
             body,
@@ -298,7 +303,12 @@ fun PetAvatar(
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            Text(species.emoji, fontSize = (size.value * 0.42f).sp)
+            Icon(
+                species.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(size * 0.46f),
+            )
         }
     }
 }
@@ -411,7 +421,6 @@ fun WellnessRing(
 
 // ------------------------------------------------------------------ Emoji scale input
 
-private val faces = listOf("😫", "😟", "😐", "🙂", "😄")
 
 /** Five tappable faces (1..5). Faster and more accessible than a slider, 48dp+ touch targets. */
 @Composable
@@ -432,7 +441,7 @@ fun EmojiScale(
         }
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            faces.forEachIndexed { index, face ->
+            GpIcons.faces.forEachIndexed { index, face ->
                 val score = index + 1
                 val isSelected = value == score
                 val scale = animateFloatAsState(
@@ -463,7 +472,12 @@ fun EmojiScale(
                         .semantics { contentDescription = "$label $score of 5" },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(face, fontSize = 24.sp, modifier = Modifier.graphicsLayer { alpha = dim.value })
+                    Icon(
+                        face,
+                        contentDescription = null,
+                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(30.dp).graphicsLayer { alpha = dim.value },
+                    )
                 }
             }
         }

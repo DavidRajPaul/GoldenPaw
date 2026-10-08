@@ -61,9 +61,7 @@ class AndroidPlatformServices(
         batteryApplicable = true,
     )
 
-    override fun openNotificationSettings() {
-        start(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
-    }
+    override fun openNotificationSettings() = openAppNotificationSettings(context)
 
     override fun openExactAlarmSettings() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
