@@ -52,10 +52,13 @@ class ReducedMotionSpecTest {
     }
 
     @Test
-    fun scopedDefaultsMatchComposeDefaults() {
-        // AnimatedVisibility's documented defaults; call sites pass these so normal motion is unchanged.
-        assertEquals(fadeIn() + expandVertically(), ReducedMotion.columnEnter)
-        assertEquals(fadeOut() + shrinkVertically(), ReducedMotion.columnExit)
+    fun scopedDefaultsAreReplacedByAFadeWhenReduced() {
+        // expand/shrink specs hold size lambdas, so they can't be compared by value; what matters is
+        // that the reduced path never keeps them.
+        assertEquals(fade, ReducedMotion.enter(true, ReducedMotion.columnEnter))
+        assertEquals(fade, ReducedMotion.enter(true, ReducedMotion.defaultEnter))
+        assertEquals(fadeOutReduced, ReducedMotion.exit(true, ReducedMotion.columnExit))
+        assertEquals(fadeOutReduced, ReducedMotion.exit(true, ReducedMotion.defaultExit))
     }
 
     @Test
