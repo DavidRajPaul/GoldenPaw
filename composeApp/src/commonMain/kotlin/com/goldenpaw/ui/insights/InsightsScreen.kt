@@ -1,14 +1,10 @@
 package com.goldenpaw.ui.insights
 
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
 import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -85,7 +81,6 @@ import com.goldenpaw.ui.designsystem.EmptyState
 import com.goldenpaw.ui.designsystem.GoodDayCalendar
 import com.goldenpaw.ui.designsystem.GpCard
 import com.goldenpaw.ui.designsystem.LocalReduceMotion
-import com.goldenpaw.ui.designsystem.Motion
 import com.goldenpaw.ui.designsystem.Pill
 import com.goldenpaw.ui.designsystem.ScoreBar
 import com.goldenpaw.ui.designsystem.SkeletonCard
@@ -141,14 +136,7 @@ fun InsightsScreen() {
         )
         AnimatedContent(
             targetState = tab,
-            transitionSpec = {
-                if (reduceMotion) fadeIn(tween(120)) togetherWith fadeOut(tween(120))
-                else {
-                    val dir = if (targetState > initialState) 1 else -1
-                    (slideInHorizontally(tween(Motion.MEDIUM2, easing = Motion.EmphasizedDecelerate)) { it / 8 * dir } + fadeIn(tween(Motion.MEDIUM2))) togetherWith
-                        (slideOutHorizontally(tween(Motion.SHORT4, easing = Motion.EmphasizedAccelerate)) { -it / 8 * dir } + fadeOut(tween(Motion.SHORT2)))
-                }
-            },
+            transitionSpec = { MotionSpecs.axisX(reduceMotion, MotionSpecs.AxisPreset.InScreenTab, forward = targetState > initialState) },
             label = "insightsTab",
         ) { selected ->
             when (selected) {

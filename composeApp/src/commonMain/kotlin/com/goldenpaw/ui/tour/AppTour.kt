@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.tour
 
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
 import com.goldenpaw.ui.designsystem.rememberAmbientTransition
 
 import androidx.compose.animation.AnimatedContent
@@ -15,9 +17,6 @@ import androidx.compose.animation.core.snap
 import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -184,7 +183,7 @@ fun AppTour(
             ) {
                 AnimatedContent(
                     targetState = last,
-                    transitionSpec = { fadeIn(tween(150)) togetherWith fadeOut(tween(150)) },
+                    transitionSpec = { MotionSpecs.fadeThrough(reduceMotion, MotionSpecs.FadePreset.Quick) },
                     label = "tourCta",
                 ) { isLast -> Text(if (isLast) "Let's go" else "Next") }
             }

@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.navigation
 
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -7,14 +9,6 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -208,8 +202,9 @@ fun Modifier.sharedPetPhoto(petId: String): Modifier {
 
 /**
  * Renders the top of the back stack with Material motion:
- *  - push/pop: shared axis X (slide 10–30% + fade, emphasized easing)
- *  - tab switch: fade through (fade + 92% scale-in)
+ *  - push/pop: shared axis X (MotionSpecs.AxisPreset.NavPush / NavPop)
+ *  - tab switch: direction-aware shared axis X (MotionSpecs.AxisPreset.NavTab)
+ *  - replace (onboarding → app): fade through (MotionSpecs.FadePreset.Screen)
  *  - predictive back (Android 14+): the screen scales to 90% and shifts toward the swipe edge with
  *    rounded corners while dragging; committing continues smoothly from where the finger left it.
  * Every entry gets its own ViewModelStore and saveable state, released when it's popped.
@@ -288,30 +283,15 @@ fun NavHost(
 }
 
 private fun AnimatedContentTransitionScope<NavEntry>.transitionFor(action: NavAction, tabDirection: Int, reduceMotion: Boolean): ContentTransform {
-    if (reduceMotion) return fadeIn(tween(150)) togetherWith fadeOut(tween(150))
     val predictive = initialState.backProgress > 0f
     return when (action) {
-        NavAction.PUSH ->
-            (slideInHorizontally(tween(Motion.MEDIUM4, easing = Motion.EmphasizedDecelerate)) { it / 4 } +
-                fadeIn(tween(Motion.MEDIUM2, delayMillis = 50))) togetherWith
-                (slideOutHorizontally(tween(Motion.MEDIUM2, easing = Motion.EmphasizedAccelerate)) { -it / 10 } +
-                    fadeOut(tween(Motion.SHORT4)))
+        NavAction.PUSH -> MotionSpecs.axisX(reduceMotion, MotionSpecs.AxisPreset.NavPush, forward = true)
+        // The screen underneath is drawn below the one leaving.
         NavAction.POP ->
-            if (predictive) {
-                fadeIn(tween(Motion.MEDIUM2)) togetherWith
-                    (fadeOut(tween(Motion.SHORT4)) + scaleOut(tween(Motion.MEDIUM2), targetScale = 0.85f))
-            } else {
-                (slideInHorizontally(tween(Motion.MEDIUM4, easing = Motion.EmphasizedDecelerate)) { -it / 10 } +
-                    fadeIn(tween(Motion.MEDIUM2))) togetherWith
-                    (slideOutHorizontally(tween(Motion.MEDIUM2, easing = Motion.EmphasizedAccelerate)) { it / 4 } +
-                        fadeOut(tween(Motion.SHORT4)))
-            }.apply { targetContentZIndex = -1f }
+            (if (predictive) MotionSpecs.predictivePop(reduceMotion) else MotionSpecs.axisX(reduceMotion, MotionSpecs.AxisPreset.NavPop, forward = false))
+                .apply { targetContentZIndex = -1f }
         // Direction-aware shared axis X: the new tab slides in from the side it sits on in the bar.
-        NavAction.TAB ->
-            (slideInHorizontally(tween(Motion.MEDIUM2, easing = Motion.EmphasizedDecelerate)) { tabDirection * it / 6 } +
-                fadeIn(tween(Motion.MEDIUM1, delayMillis = 60, easing = Motion.EmphasizedDecelerate))) togetherWith
-                (slideOutHorizontally(tween(Motion.MEDIUM1, easing = Motion.EmphasizedAccelerate)) { -tabDirection * it / 8 } +
-                    fadeOut(tween(Motion.SHORT2)))
-        NavAction.REPLACE -> fadeIn(tween(Motion.MEDIUM4)) togetherWith fadeOut(tween(Motion.SHORT4))
+        NavAction.TAB -> MotionSpecs.axisX(reduceMotion, MotionSpecs.AxisPreset.NavTab, forward = tabDirection >= 0)
+        NavAction.REPLACE -> MotionSpecs.fadeThrough(reduceMotion, MotionSpecs.FadePreset.Screen)
     }
 }

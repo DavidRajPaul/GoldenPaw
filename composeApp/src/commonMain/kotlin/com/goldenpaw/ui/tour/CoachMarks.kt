@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.tour
 
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
 import com.goldenpaw.ui.designsystem.rememberAmbientTransition
 
 import androidx.compose.animation.AnimatedVisibility
@@ -9,9 +11,6 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -160,6 +159,7 @@ fun Modifier.coachMark(tip: FeatureTip): Modifier = composed {
  */
 @Composable
 fun CoachMarkHost(controller: CoachMarkController, onSeen: (String) -> Unit) {
+    val reduce = LocalReduceMotion.current
     var windowSize by remember { mutableStateOf(Size.Zero) }
     val candidate = controller.candidate(windowSize)
     var shown by remember { mutableStateOf<FeatureTip?>(null) }
@@ -183,7 +183,7 @@ fun CoachMarkHost(controller: CoachMarkController, onSeen: (String) -> Unit) {
         if (tip != null && bounds != null) {
             key(tip.id) {
                 val appear = remember { MutableTransitionState(false).apply { targetState = true } }
-                AnimatedVisibility(visibleState = appear, enter = fadeIn(tween(220)), exit = fadeOut(tween(160))) {
+                AnimatedVisibility(visibleState = appear, enter = MotionSpecs.scrimEnter(reduce), exit = MotionSpecs.scrimExit(reduce)) {
                     Spotlight(
                         tip = tip,
                         anchor = bounds,
@@ -246,7 +246,7 @@ private fun Spotlight(tip: FeatureTip, anchor: Rect, onDismiss: () -> Unit) {
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             ) {
                 val pop = remember { MutableTransitionState(false).apply { targetState = true } }
-                AnimatedVisibility(visibleState = pop, enter = if (reduceMotion) fadeIn() else scaleIn(initialScale = 0.9f) + fadeIn()) {
+                AnimatedVisibility(visibleState = pop, enter = MotionSpecs.popoverEnter(reduceMotion)) {
                     Column(Modifier.padding(start = 20.dp, end = 12.dp, top = 18.dp, bottom = 8.dp)) {
                         Text(tip.title, style = MaterialTheme.typography.titleMedium)
                         Text(

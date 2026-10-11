@@ -1,14 +1,9 @@
 package com.goldenpaw
 
-import com.goldenpaw.ui.designsystem.reducedOr
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,8 +52,6 @@ import com.goldenpaw.ui.checkin.CheckInScreen
 import com.goldenpaw.ui.designsystem.GoldenPawTheme
 import com.goldenpaw.ui.designsystem.LocalAppFiles
 import com.goldenpaw.ui.designsystem.LocalReduceMotion
-import com.goldenpaw.ui.designsystem.Motion
-import com.goldenpaw.ui.designsystem.PawMark
 import com.goldenpaw.ui.insights.InsightsScreen
 import com.goldenpaw.ui.journal.JournalScreen
 import com.goldenpaw.ui.journal.SymptomEditorScreen
@@ -86,7 +79,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-import androidx.compose.animation.scaleOut
 import com.goldenpaw.ui.designsystem.ChoreographedSplash
 import com.goldenpaw.ui.navigation.GpBottomBar
 import com.goldenpaw.ui.records.RecordDetailScreen
@@ -139,13 +131,8 @@ fun GoldenPawApp(
                     }
                     AnimatedVisibility(
                         visible = !splashDone || !state.loaded,
-                        enter = fadeIn(),
-                        exit = if (reduceMotion) {
-                            fadeOut(tween(Motion.SHORT4))
-                        } else {
-                            fadeOut(tween(Motion.MEDIUM2, easing = Motion.EmphasizedAccelerate)) +
-                                scaleOut(tween(Motion.MEDIUM4, easing = Motion.EmphasizedDecelerate), targetScale = 1.08f)
-                        },
+                        enter = MotionSpecs.overlayEnter(reduceMotion), // never plays: the splash starts visible
+                        exit = MotionSpecs.splashExit(reduceMotion),
                     ) {
                         ChoreographedSplash(onFinished = { splashDone = true })
                     }
@@ -164,6 +151,7 @@ private fun AppContent(
 ) {
     val state by appVm.state.collectAsStateWithLifecycle()
     val celebrations by gamificationVm.celebrations.collectAsStateWithLifecycle()
+    val reduce = LocalReduceMotion.current
     val navigator = remember { Navigator(if (state.settings.onboardingDone) Route.Today else Route.Onboarding) }
     var paywallReason by remember { mutableStateOf<String?>(null) }
     var paywallOfferId by remember { mutableStateOf<String?>(null) }
@@ -223,8 +211,8 @@ private fun AppContent(
             bottomBar = {
                 AnimatedVisibility(
                     visible = navigator.isTopLevel,
-                    enter = reducedOr(slideInVertically(Motion.spatialDefault()) { it } + fadeIn()),
-                    exit = reducedOr(slideOutVertically(Motion.spatialFast()) { it } + fadeOut()),
+                    enter = MotionSpecs.barEnter(reduce),
+                    exit = MotionSpecs.barExit(reduce),
                 ) {
                     GpBottomBar(current = navigator.current.route, onSelect = { navigator.switchTab(it) })
                 }
@@ -296,7 +284,7 @@ private fun AppContent(
             )
         }
         CoachMarkHost(coachMarks, onSeen = { id -> tipScope.launch { tipsStore.markSeen(id) } })
-        AnimatedVisibility(visible = showTour, enter = fadeIn(tween(Motion.MEDIUM2)), exit = fadeOut(tween(Motion.MEDIUM2))) {
+        AnimatedVisibility(visible = showTour, enter = MotionSpecs.overlayEnter(reduce), exit = MotionSpecs.overlayExit(reduce)) {
             AppTour(petName = state.selectedPet?.name, onFinish = { offers -> appVm.finishTour(offers) })
         }
     }

@@ -1,21 +1,15 @@
 package com.goldenpaw.ui.records
 
-import com.goldenpaw.ui.designsystem.reducedOr
-import com.goldenpaw.ui.designsystem.ReducedMotion
+import com.goldenpaw.ui.designsystem.MotionSpecs
+import com.goldenpaw.ui.designsystem.expandTransition
+import com.goldenpaw.ui.designsystem.collapseTransition
+
 
 import com.goldenpaw.ui.tour.FeatureTips
 import com.goldenpaw.ui.tour.coachMark
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -112,7 +106,6 @@ import com.goldenpaw.ui.designsystem.GpIcons
 import com.goldenpaw.ui.designsystem.IconBadge
 import com.goldenpaw.ui.designsystem.LocalReduceMotion
 import com.goldenpaw.ui.designsystem.LocalWellnessColors
-import com.goldenpaw.ui.designsystem.Motion
 import com.goldenpaw.ui.designsystem.Pill
 import com.goldenpaw.ui.designsystem.SectionHeader
 import com.goldenpaw.ui.designsystem.icon
@@ -221,16 +214,7 @@ fun RecordScanScreen(petId: String, recordId: String?) {
         val reduce = LocalReduceMotion.current
         AnimatedContent(
             targetState = state.step,
-            transitionSpec = {
-                if (reduce) {
-                    fadeIn(tween(120)) togetherWith fadeOut(tween(120))
-                } else {
-                    val forward = targetState.ordinal > initialState.ordinal
-                    (slideInHorizontally(tween(Motion.MEDIUM2, easing = Motion.EmphasizedDecelerate)) { if (forward) it / 5 else -it / 5 } +
-                        fadeIn(tween(Motion.MEDIUM1))) togetherWith
-                        (slideOutHorizontally(tween(Motion.MEDIUM1)) { if (forward) -it / 8 else it / 8 } + fadeOut(tween(Motion.SHORT2)))
-                }
-            },
+            transitionSpec = { MotionSpecs.axisX(reduce, MotionSpecs.AxisPreset.ScanStep, forward = targetState.ordinal > initialState.ordinal) },
             label = "scanStep",
             modifier = Modifier.fillMaxSize().padding(padding),
         ) { step ->
@@ -564,8 +548,8 @@ private fun DetailsStep(state: RecordEditorState, vm: RecordEditorViewModel) {
         val showVaccines = state.type == DocumentType.VACCINE_CARD || state.vaccines.isNotEmpty()
         AnimatedVisibility(
             visible = showVaccines,
-            enter = reducedOr(fadeIn() + expandVertically()),
-            exit = reducedOr(fadeOut() + shrinkVertically()),
+            enter = expandTransition(MotionSpecs.ExpandPreset.Inline),
+            exit = collapseTransition(MotionSpecs.ExpandPreset.Inline),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionHeader("Vaccines & treatments")
@@ -698,7 +682,11 @@ private fun RecognizedTextCard(text: String) {
             Text("Text read from the scan", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
             Text(if (open) "Hide" else "Show", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
-        AnimatedVisibility(open, enter = reducedOr(ReducedMotion.columnEnter), exit = reducedOr(ReducedMotion.columnExit)) {
+        AnimatedVisibility(
+            open,
+            enter = expandTransition(MotionSpecs.ExpandPreset.Inline),
+            exit = collapseTransition(MotionSpecs.ExpandPreset.Inline),
+        ) {
             Text(
                 text,
                 style = MaterialTheme.typography.bodySmall,

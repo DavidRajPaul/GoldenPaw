@@ -1,14 +1,10 @@
 package com.goldenpaw.ui.quicklog
 
-import com.goldenpaw.ui.designsystem.ReducedMotion
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
 import com.goldenpaw.ui.designsystem.LocalReduceMotion
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -197,9 +193,7 @@ fun QuickLogSheet(onDismiss: () -> Unit) {
                 val reduce = LocalReduceMotion.current
                 AnimatedContent(
                     targetState = feedback,
-                    transitionSpec = {
-                        ReducedMotion.content(reduce, (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)) togetherWith fadeOut(tween(120)))
-                    },
+                    transitionSpec = { MotionSpecs.successPop(reduce, MotionSpecs.SuccessPreset.Chip) },
                     label = "quickFeedback",
                 ) { f ->
                     if (f != null) {

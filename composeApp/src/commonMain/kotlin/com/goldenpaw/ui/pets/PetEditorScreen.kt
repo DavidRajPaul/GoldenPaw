@@ -1,12 +1,8 @@
 package com.goldenpaw.ui.pets
 
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,7 +61,6 @@ import com.goldenpaw.ui.common.NumberField
 import com.goldenpaw.ui.common.rememberToday
 import com.goldenpaw.ui.designsystem.ChoiceChips
 import com.goldenpaw.ui.designsystem.LocalReduceMotion
-import com.goldenpaw.ui.designsystem.Motion
 import com.goldenpaw.ui.designsystem.PetAvatar
 import com.goldenpaw.ui.designsystem.StepProgress
 import com.goldenpaw.ui.navigation.LocalAppActions
@@ -116,14 +111,7 @@ fun PetEditorScreen(petId: String?, onDone: (String) -> Unit) {
             StepProgress(state.step, 3, Modifier.padding(vertical = 8.dp))
             AnimatedContent(
                 targetState = state.step,
-                transitionSpec = {
-                    if (reduceMotion) fadeIn(tween(120)) togetherWith fadeOut(tween(120))
-                    else {
-                        val dir = if (targetState > initialState) 1 else -1
-                        (slideInHorizontally(tween(Motion.MEDIUM2, easing = Motion.EmphasizedDecelerate)) { it / 4 * dir } + fadeIn(tween(Motion.MEDIUM2))) togetherWith
-                            (slideOutHorizontally(tween(Motion.SHORT4, easing = Motion.EmphasizedAccelerate)) { -it / 4 * dir } + fadeOut(tween(Motion.SHORT2)))
-                    }
-                },
+                transitionSpec = { MotionSpecs.axisX(reduceMotion, MotionSpecs.AxisPreset.Step, forward = targetState > initialState) },
                 label = "petStep",
                 modifier = Modifier.weight(1f),
             ) { step ->

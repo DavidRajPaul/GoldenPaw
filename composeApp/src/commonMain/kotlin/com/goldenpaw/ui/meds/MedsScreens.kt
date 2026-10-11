@@ -1,18 +1,15 @@
 package com.goldenpaw.ui.meds
 
-import com.goldenpaw.ui.designsystem.reducedOr
-import com.goldenpaw.ui.designsystem.ReducedMotion
+import com.goldenpaw.ui.designsystem.expandTransition
+import com.goldenpaw.ui.designsystem.collapseTransition
+
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
 
 import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -82,7 +79,6 @@ import com.goldenpaw.ui.designsystem.ChoiceChips
 import com.goldenpaw.ui.designsystem.EmptyState
 import com.goldenpaw.ui.designsystem.GpCard
 import com.goldenpaw.ui.designsystem.LocalReduceMotion
-import com.goldenpaw.ui.designsystem.Motion
 import com.goldenpaw.ui.designsystem.Pill
 import com.goldenpaw.ui.designsystem.SectionHeader
 import com.goldenpaw.ui.designsystem.StepProgress
@@ -301,14 +297,7 @@ fun MedicationEditorScreen(petId: String, medId: String?) {
             StepProgress(form.step, 3, Modifier.padding(vertical = 8.dp))
             AnimatedContent(
                 targetState = form.step,
-                transitionSpec = {
-                    if (reduceMotion) fadeIn(tween(120)) togetherWith fadeOut(tween(120))
-                    else {
-                        val dir = if (targetState > initialState) 1 else -1
-                        (slideInHorizontally(tween(Motion.MEDIUM2, easing = Motion.EmphasizedDecelerate)) { it / 4 * dir } + fadeIn(tween(Motion.MEDIUM2))) togetherWith
-                            (slideOutHorizontally(tween(Motion.SHORT4, easing = Motion.EmphasizedAccelerate)) { -it / 4 * dir } + fadeOut(tween(Motion.SHORT2)))
-                    }
-                },
+                transitionSpec = { MotionSpecs.axisX(reduceMotion, MotionSpecs.AxisPreset.Step, forward = targetState > initialState) },
                 label = "medStep",
                 modifier = Modifier.weight(1f),
             ) { step ->
@@ -394,8 +383,8 @@ private fun StepWhen(form: MedForm, vm: MedicationEditorViewModel) {
 
     AnimatedVisibility(
         form.type == ScheduleType.EVERY_N_DAYS,
-        enter = reducedOr(ReducedMotion.defaultEnter),
-        exit = reducedOr(ReducedMotion.defaultExit),
+        enter = expandTransition(MotionSpecs.ExpandPreset.Field),
+        exit = collapseTransition(MotionSpecs.ExpandPreset.Field),
     ) {
         NumberField(
             value = form.intervalDays.toString(),
@@ -408,8 +397,8 @@ private fun StepWhen(form: MedForm, vm: MedicationEditorViewModel) {
     }
     AnimatedVisibility(
         form.type == ScheduleType.WEEKDAYS,
-        enter = reducedOr(ReducedMotion.defaultEnter),
-        exit = reducedOr(ReducedMotion.defaultExit),
+        enter = expandTransition(MotionSpecs.ExpandPreset.Field),
+        exit = collapseTransition(MotionSpecs.ExpandPreset.Field),
     ) {
         Column {
             Text("On these days", style = MaterialTheme.typography.titleSmall)
@@ -449,8 +438,8 @@ private fun StepWhen(form: MedForm, vm: MedicationEditorViewModel) {
 
     AnimatedVisibility(
         form.type == ScheduleType.TAPERING,
-        enter = reducedOr(ReducedMotion.defaultEnter),
-        exit = reducedOr(ReducedMotion.defaultExit),
+        enter = expandTransition(MotionSpecs.ExpandPreset.Field),
+        exit = collapseTransition(MotionSpecs.ExpandPreset.Field),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Dose changes", style = MaterialTheme.typography.titleSmall)

@@ -1,6 +1,5 @@
 package com.goldenpaw.ui.designsystem
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -10,8 +9,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -531,11 +528,6 @@ fun LabeledValue(label: String, value: String, modifier: Modifier = Modifier) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.bodyLarge)
     }
-}
-
-@Composable
-fun FadeInVisibility(visible: Boolean, content: @Composable () -> Unit) {
-    AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut()) { content() }
 }
 
 @Composable
