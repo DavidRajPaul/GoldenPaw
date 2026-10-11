@@ -42,7 +42,7 @@ object ReducedMotion {
 
     /** Content swap: crossfade, and the container jumps to its new size instead of animating it. */
     fun content(reduced: Boolean, normal: ContentTransform): ContentTransform =
-        if (reduced) (fadeEnter() togetherWith fadeExit()).using(snapSize()) else normal
+        if (reduced) ContentTransform(fadeEnter(), fadeExit(), sizeTransform = snapSize()) else normal
 
     fun snapSize(): SizeTransform = SizeTransform(clip = true) { _, _ -> snap() }
 
