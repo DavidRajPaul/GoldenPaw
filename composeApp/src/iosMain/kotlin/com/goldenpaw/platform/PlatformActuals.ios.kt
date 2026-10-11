@@ -13,6 +13,13 @@ import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSUUID
 import platform.Foundation.writeToFile
 import platform.UIKit.UIAccessibilityIsReduceMotionEnabled
+import platform.UIKit.UIAccessibilityReduceMotionStatusDidChangeNotification
+import platform.Foundation.NSNotificationCenter
+import platform.Foundation.NSOperationQueue
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import platform.UIKit.UIGraphicsBeginImageContextWithOptions
 import platform.UIKit.UIGraphicsEndImageContext
 import platform.UIKit.UIGraphicsGetImageFromCurrentImageContext
@@ -134,4 +141,17 @@ actual fun rememberPdfPreview(path: String?): ImageBitmap? = null
 actual fun platformDynamicColorScheme(dark: Boolean): ColorScheme? = null
 
 @Composable
-actual fun systemPrefersReducedMotion(): Boolean = remember { UIAccessibilityIsReduceMotionEnabled() }
+actual fun systemPrefersReducedMotion(): Boolean {
+    // Reactive: iOS posts this notification when Settings → Accessibility → Motion → Reduce Motion
+    // changes, including while the app is in the background.
+    var reduced by remember { mutableStateOf(UIAccessibilityIsReduceMotionEnabled()) }
+    DisposableEffect(Unit) {
+        val token = NSNotificationCenter.defaultCenter.addObserverForName(
+            name = UIAccessibilityReduceMotionStatusDidChangeNotification,
+            `object` = null,
+            queue = NSOperationQueue.mainQueue,
+        ) { _ -> reduced = UIAccessibilityIsReduceMotionEnabled() }
+        onDispose { NSNotificationCenter.defaultCenter.removeObserver(token) }
+    }
+    return reduced
+}

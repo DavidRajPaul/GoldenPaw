@@ -1,5 +1,10 @@
 package com.goldenpaw.ui.meds
 
+import com.goldenpaw.ui.designsystem.reducedOr
+import com.goldenpaw.ui.designsystem.ReducedMotion
+
+import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -144,7 +149,7 @@ fun MedsScreen(petId: String) {
                 MedicationCard(
                     med = med,
                     canEdit = state.canEdit,
-                    modifier = Modifier.animateItem(),
+                    modifier = motionAwareAnimateItem(),
                     onEdit = { actions.navigate(Route.MedEdit(petId, med.id)) },
                     onToggle = { vm.setActive(med, !med.isActive) },
                     onRefill = { refillFor = med },
@@ -157,7 +162,7 @@ fun MedsScreen(petId: String) {
                     MedicationCard(
                         med = med,
                         canEdit = state.canEdit,
-                        modifier = Modifier.animateItem(),
+                        modifier = motionAwareAnimateItem(),
                         onEdit = { actions.navigate(Route.MedEdit(petId, med.id)) },
                         onToggle = { vm.setActive(med, !med.isActive) },
                         onRefill = { refillFor = med },
@@ -387,7 +392,11 @@ private fun StepWhen(form: MedForm, vm: MedicationEditorViewModel) {
         }
     }
 
-    AnimatedVisibility(form.type == ScheduleType.EVERY_N_DAYS) {
+    AnimatedVisibility(
+        form.type == ScheduleType.EVERY_N_DAYS,
+        enter = reducedOr(ReducedMotion.defaultEnter),
+        exit = reducedOr(ReducedMotion.defaultExit),
+    ) {
         NumberField(
             value = form.intervalDays.toString(),
             onValue = { v -> v.toIntOrNull()?.let { n -> vm.update { it.copy(intervalDays = n.coerceIn(1, 60)) } } },
@@ -397,7 +406,11 @@ private fun StepWhen(form: MedForm, vm: MedicationEditorViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
     }
-    AnimatedVisibility(form.type == ScheduleType.WEEKDAYS) {
+    AnimatedVisibility(
+        form.type == ScheduleType.WEEKDAYS,
+        enter = reducedOr(ReducedMotion.defaultEnter),
+        exit = reducedOr(ReducedMotion.defaultExit),
+    ) {
         Column {
             Text("On these days", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(6.dp))
@@ -434,7 +447,11 @@ private fun StepWhen(form: MedForm, vm: MedicationEditorViewModel) {
         }
     }
 
-    AnimatedVisibility(form.type == ScheduleType.TAPERING) {
+    AnimatedVisibility(
+        form.type == ScheduleType.TAPERING,
+        enter = reducedOr(ReducedMotion.defaultEnter),
+        exit = reducedOr(ReducedMotion.defaultExit),
+    ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Dose changes", style = MaterialTheme.typography.titleSmall)
             Text(

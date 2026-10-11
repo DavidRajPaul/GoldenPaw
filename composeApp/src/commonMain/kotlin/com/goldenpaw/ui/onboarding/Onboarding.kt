@@ -1,12 +1,13 @@
 package com.goldenpaw.ui.onboarding
 
+import com.goldenpaw.ui.designsystem.rememberAmbientTransition
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -319,14 +320,15 @@ private fun OrbitIllustration(page: Page, settled: Boolean, offset: () -> Float)
         else pop.snapTo(0.6f)
     }
 
-    val transition = rememberInfiniteTransition(label = "orbit")
-    val phase = if (reduce) null else transition.animateFloat(
+    // Not created at all under reduced motion.
+    val transition = rememberAmbientTransition(label = "orbit")
+    val phase = transition?.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(14_000, easing = LinearEasing)),
         label = "orbitPhase",
     )
-    val breath = if (reduce) null else transition.animateFloat(
+    val breath = transition?.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(3_200, easing = Motion.Standard), RepeatMode.Reverse),

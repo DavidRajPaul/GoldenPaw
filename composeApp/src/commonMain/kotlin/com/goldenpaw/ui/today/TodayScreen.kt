@@ -1,5 +1,10 @@
 package com.goldenpaw.ui.today
 
+import com.goldenpaw.ui.designsystem.reducedOr
+import com.goldenpaw.ui.designsystem.ReducedMotion
+
+import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
+
 import com.goldenpaw.ui.tour.FeatureTips
 import com.goldenpaw.ui.tour.coachMark
 
@@ -282,7 +287,7 @@ fun TodayScreen() {
             }
             state.doubleDoses.forEach { slot ->
                 item(key = "double-${slot.key}", contentType = "warning") {
-                    DoubleDoseCard(slot, state.team, Modifier.animateItem())
+                    DoubleDoseCard(slot, state.team, motionAwareAnimateItem())
                 }
             }
             state.milestone?.let { m ->
@@ -290,7 +295,7 @@ fun TodayScreen() {
             }
             if (state.insights.isNotEmpty()) {
                 items(state.insights, key = { "insight-" + it.title }, contentType = { "insight" }) {
-                    InsightCard(it, Modifier.animateItem())
+                    InsightCard(it, motionAwareAnimateItem())
                 }
             }
             state.upcomingVisit?.let { visit ->
@@ -298,7 +303,7 @@ fun TodayScreen() {
                     GpCard(
                         onClick = { actions.navigate(Route.VetVisitEdit(pet.id, visit.id)) },
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        modifier = Modifier.animateItem(),
+                        modifier = motionAwareAnimateItem(),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Outlined.LocalHospital, contentDescription = null)
@@ -322,7 +327,7 @@ fun TodayScreen() {
                         due = records.due,
                         today = today,
                         onOpen = { d -> actions.navigate(Route.RecordDetail(pet.id, d.documentId)) },
-                        modifier = Modifier.animateItem(),
+                        modifier = motionAwareAnimateItem(),
                     )
                 }
             }
@@ -331,7 +336,7 @@ fun TodayScreen() {
                     GpCard(
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                         onClick = { actions.navigate(Route.Meds(pet.id)) },
-                        modifier = Modifier.animateItem(),
+                        modifier = motionAwareAnimateItem(),
                     ) {
                         Text("Refill ${med.name} soon", style = MaterialTheme.typography.titleMedium)
                         val days = med.daysOfSupplyLeft()
@@ -379,7 +384,7 @@ fun TodayScreen() {
                         onGive = { vm.give(slot) },
                         onSkip = { vm.skip(slot) },
                         onUndo = { vm.undo(slot) },
-                        modifier = Modifier.animateItem().staggerIn(stagger, slot.key, index + 2),
+                        modifier = motionAwareAnimateItem().staggerIn(stagger, slot.key, index + 2),
                     )
                 }
             }
@@ -406,7 +411,7 @@ fun TodayScreen() {
                     GpCard(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         onClick = { actions.navigate(Route.CheckIn(pet.id)) },
-                        modifier = Modifier.animateItem(),
+                        modifier = motionAwareAnimateItem(),
                     ) {
                         Text("How was ${pet.name}'s day?", style = MaterialTheme.typography.titleMedium)
                         Text(
@@ -653,7 +658,12 @@ private fun HeroCard(
                 Spacer(Modifier.height(10.dp))
                 if (total > 0) Pill("$given of $total doses given")
                 Spacer(Modifier.height(6.dp))
-                AnimatedContent(targetState = checkedInToday, label = "checkedIn") { done ->
+                val reduce = LocalReduceMotion.current
+                AnimatedContent(
+                    targetState = checkedInToday,
+                    transitionSpec = { ReducedMotion.content(reduce, ReducedMotion.defaultContent()) },
+                    label = "checkedIn",
+                ) { done ->
                     if (!done) {
                         TextButton(onClick = onCheckIn, contentPadding = PaddingValues(0.dp)) { Text("Check in now") }
                     } else {
@@ -753,7 +763,9 @@ private fun DoseCard(
         animationSpec = tween(Motion.MEDIUM2),
         label = "doseBg",
     )
-    GpCard(modifier = modifier.animateContentSize(Motion.spatialDefault()), containerColor = container, contentPadding = PaddingValues(14.dp)) {
+    // Reduced motion: the card jumps to its new height instead of animating it.
+    val sizeModifier = if (reduceMotion) Modifier else Modifier.animateContentSize(Motion.spatialDefault())
+    GpCard(modifier = modifier.then(sizeModifier), containerColor = container, contentPadding = PaddingValues(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -780,7 +792,11 @@ private fun DoseCard(
                     }
                 }
                 val event = slot.event
-                AnimatedVisibility(visible = done && event != null, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+                AnimatedVisibility(
+                    visible = done && event != null,
+                    enter = reducedOr(fadeIn() + expandVertically()),
+                    exit = reducedOr(fadeOut() + shrinkVertically()),
+                ) {
                     if (event != null) {
                         val member = team?.member(event.givenById)
                         Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -903,8 +919,8 @@ private fun UpcomingSection(upcoming: List<Pair<LocalDate, List<DoseSlot>>>, tod
         }
         AnimatedVisibility(
             visible = expanded,
-            enter = expandVertically(Motion.spatialDefault()) + fadeIn(),
-            exit = shrinkVertically(Motion.spatialFast()) + fadeOut(),
+            enter = reducedOr(expandVertically(Motion.spatialDefault()) + fadeIn()),
+            exit = reducedOr(shrinkVertically(Motion.spatialFast()) + fadeOut()),
         ) {
             Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 upcoming.forEach { (date, slots) ->

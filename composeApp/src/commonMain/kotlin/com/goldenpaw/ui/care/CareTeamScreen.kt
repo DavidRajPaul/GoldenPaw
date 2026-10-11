@@ -1,5 +1,10 @@
 package com.goldenpaw.ui.care
 
+import com.goldenpaw.ui.designsystem.reducedOr
+import com.goldenpaw.ui.designsystem.ReducedMotion
+
+import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -179,7 +184,7 @@ fun CareTeamScreen() {
             if (state.activity.isNotEmpty()) {
                 item(key = "logHeader") { SectionHeader("Care log") }
                 items(state.activity, key = { it.id }) { a ->
-                    ActivityRow(a, modifier = Modifier.animateItem())
+                    ActivityRow(a, modifier = motionAwareAnimateItem())
                 }
             }
         }
@@ -371,7 +376,7 @@ private fun SignInForm(ui: CareTeamUi, vm: CareTeamViewModel) {
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         modifier = Modifier.fillMaxWidth(),
     )
-    AnimatedVisibility(ui.codeSent) {
+    AnimatedVisibility(ui.codeSent, enter = reducedOr(ReducedMotion.defaultEnter), exit = reducedOr(ReducedMotion.defaultExit)) {
         OutlinedTextField(
             value = ui.otp,
             onValueChange = vm::setOtp,

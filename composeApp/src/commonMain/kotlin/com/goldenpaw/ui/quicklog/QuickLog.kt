@@ -1,5 +1,8 @@
 package com.goldenpaw.ui.quicklog
 
+import com.goldenpaw.ui.designsystem.ReducedMotion
+import com.goldenpaw.ui.designsystem.LocalReduceMotion
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -191,9 +194,12 @@ fun QuickLogSheet(onDismiss: () -> Unit) {
                     Text("Quick log", style = MaterialTheme.typography.titleLarge)
                     Text(pet?.name ?: "Add a pet first", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                val reduce = LocalReduceMotion.current
                 AnimatedContent(
                     targetState = feedback,
-                    transitionSpec = { (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)) togetherWith fadeOut(tween(120)) },
+                    transitionSpec = {
+                        ReducedMotion.content(reduce, (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)) togetherWith fadeOut(tween(120)))
+                    },
                     label = "quickFeedback",
                 ) { f ->
                     if (f != null) {
