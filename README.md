@@ -124,7 +124,7 @@ composeApp/              Compose Multiplatform UI
   src/desktopMain        main.kt, tray reminders
 iosApp/                  XcodeGen project + SwiftUI host
 supabase/                SQL migration (RLS, triggers, invite RPCs) + weekly-summary Edge Function
-docs/                    TESTING.md, MARKET_RESEARCH_2.md
+docs/                    TESTING.md, MARKET_RESEARCH.md
 ```
 
 ## 🗺 Roadmap
@@ -143,7 +143,7 @@ docs/                    TESTING.md, MARKET_RESEARCH_2.md
 - [ ] Vet expense tracking, HCPI pain and cognitive (CCDR) assessments, iOS widget
 - [ ] Baseline Profile, crash reporting, analytics
 
-See [docs/MARKET_RESEARCH_2.md](docs/MARKET_RESEARCH_2.md) for the research behind 1.1.
+See [docs/MARKET_RESEARCH.md](docs/MARKET_RESEARCH.md) for the research behind 1.1.
 
 ## ⚠️ Disclaimer
 

@@ -65,7 +65,7 @@ jobs:
 
   ios:
     name: iOS framework
-    if: (github.event_name == 'workflow_dispatch' && inputs.ios) || github.ref == 'refs/heads/main'
+    if: (github.event_name == 'workflow_dispatch' && inputs.ios) || github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4

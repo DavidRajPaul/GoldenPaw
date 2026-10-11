@@ -15,3 +15,19 @@ iosApp/iosApp.xcodeproj/
 supabase/.temp/
 supabase/.branches/
 .env
+
+# Stray archives and build outputs that should never be committed
+*.tar.gz
+*.zip
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+
+# Signing material and secrets
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+keystore.properties
+.env.*
