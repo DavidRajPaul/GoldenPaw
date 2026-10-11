@@ -6,8 +6,8 @@ options:
     iOS: "16.0"
 settings:
   base:
-    MARKETING_VERSION: "1.2.0"
-    CURRENT_PROJECT_VERSION: "3"
+    MARKETING_VERSION: "1.3.0"
+    CURRENT_PROJECT_VERSION: "4"
     DEVELOPMENT_TEAM: ""   # set your Apple team id to run on a device
 targets:
   iosApp:
@@ -25,7 +25,13 @@ targets:
         NSPhotoLibraryUsageDescription: "Choose a photo of your pet, a symptom, or a vet or vaccine card."
         NSCameraUsageDescription: "Scan your pet's vet and vaccine cards. The camera is only used while you scan, and pages stay on this device."
         CADisableMinimumFrameDurationOnPhone: true
+        UIBackgroundModes: [remote-notification]
         ITSAppUsesNonExemptEncryption: false
+    entitlements:
+      path: iosApp/iosApp.entitlements
+      properties:
+        # Push (APNs). Switch to "production" for App Store / TestFlight builds.
+        aps-environment: development
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.goldenpaw.app

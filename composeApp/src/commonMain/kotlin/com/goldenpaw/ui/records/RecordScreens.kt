@@ -1,5 +1,8 @@
 package com.goldenpaw.ui.records
 
+import com.goldenpaw.ui.tour.FeatureTips
+import com.goldenpaw.ui.tour.coachMark
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -869,6 +872,7 @@ fun HealthRecordsSection(petId: String, canScan: Boolean) {
             "Health records",
             action = if (canScan) "Scan" else null,
             onAction = if (canScan) ({ actions.navigate(Route.RecordScan(petId)) }) else null,
+            modifier = if (canScan) Modifier.coachMark(FeatureTips.RecordsScan) else Modifier,
         )
         if (state.records.isEmpty()) {
             GpCard(onClick = if (canScan) ({ actions.navigate(Route.RecordScan(petId)) }) else null) {

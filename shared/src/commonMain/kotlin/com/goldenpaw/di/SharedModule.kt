@@ -54,6 +54,11 @@ import com.goldenpaw.data.repository.HealthDocumentRepositoryImpl
 import com.goldenpaw.domain.repository.HealthDocumentRepository
 import com.goldenpaw.report.HealthRecordService
 import com.goldenpaw.domain.usecase.CareAttribution
+import com.goldenpaw.data.remote.PushRegistrationService
+import com.goldenpaw.data.remote.RemotePricingRepository
+import com.goldenpaw.data.settings.FeatureTipsStore
+import com.goldenpaw.domain.repository.PricingRepository
+import com.goldenpaw.domain.repository.PushPlatform
 
 /**
  * Platform pieces the shared module needs:
@@ -62,6 +67,7 @@ import com.goldenpaw.domain.usecase.CareAttribution
  *  - com.goldenpaw.domain.repository.AppFiles
  *  - com.goldenpaw.report.ReportCanvasFactory
  *  - com.goldenpaw.report.DocumentCanvasFactory
+ * …and from the app's platform module: com.goldenpaw.domain.repository.PushPlatform
  */
 expect val platformSharedModule: Module
 
@@ -104,6 +110,10 @@ val sharedModule = module {
     single { SupabaseAuthRepository(get(), get(), get(), get()) } bind CloudAuthRepository::class
     single { SupabaseSyncRepository(get(), get(), get(), get(), get(), get(), get(), get()) } bind CareSyncRepository::class
     single { AiSummaryClient(get(), get(), get(), get()) } bind SummaryGenerator::class
+    // Backend-driven pricing and push registration. PushPlatform comes from the app's platform module.
+    single<PricingRepository> { RemotePricingRepository(get(), get(), get<KeyValueStore>(), get<PushPlatform>().platform) }
+    single { PushRegistrationService(get(), get(), get<KeyValueStore>(), get(), get()) }
+    single { FeatureTipsStore(get<KeyValueStore>()) }
 
     // Domain services & use cases
     single { CareTeamService(get(), get(), get(), get(), get()) } bind CareAttribution::class

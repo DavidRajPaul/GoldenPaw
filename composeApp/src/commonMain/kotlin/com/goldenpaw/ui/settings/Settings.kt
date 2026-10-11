@@ -1,5 +1,9 @@
 package com.goldenpaw.ui.settings
 
+import com.goldenpaw.data.settings.FeatureTipsStore
+import com.goldenpaw.ui.tour.FeatureTips
+import com.goldenpaw.ui.tour.coachMark
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -86,6 +90,7 @@ class SettingsViewModel(
     private val reminders: ReminderGateway,
     private val careTeam: CareTeamService,
     auth: CloudAuthRepository,
+    private val tips: FeatureTipsStore,
 ) : ViewModel() {
 
     val settings: StateFlow<UserSettings> =
@@ -104,6 +109,13 @@ class SettingsViewModel(
     }
 
     fun reschedule() = viewModelScope.launch { reminders.rescheduleAll() }
+
+    /** Shows the welcome tour again and re-arms every one-time feature tip. */
+    fun replayTour(onDone: () -> Unit) = viewModelScope.launch {
+        tips.reset()
+        settingsRepo.update { it.copy(tourDone = false) }
+        onDone()
+    }
 
     fun export(onReady: (String) -> Unit) = viewModelScope.launch { onReady(dataManager.exportJson()) }
 
@@ -164,6 +176,7 @@ fun SettingsScreen() {
             item { SettingRow(title = "Your name", subtitle = s.ownerName.ifBlank { "Not set" }, onClick = { editName = true }) }
             item {
                 SettingRow(
+                    modifier = Modifier.coachMark(FeatureTips.CareTeam),
                     title = "Care team",
                     subtitle = session?.let { "Signed in as ${it.email}" } ?: "Family, sitters and who gave each dose",
                     onClick = { actions.navigate(Route.CareTeam) },
@@ -254,6 +267,25 @@ fun SettingsScreen() {
                 }
             }
 
+            item { SectionHeader("Notifications from GoldenPaw") }
+            item {
+                SettingSwitch(
+                    "Care team & account",
+                    "Invites, changes to your care team, backup and subscription",
+                    s.accountNotifications,
+                ) { v -> vm.update({ it.copy(accountNotifications = v) }) }
+            }
+            item {
+                SettingSwitch("New features & tips", "Now and then, when something useful arrives", s.productNotifications) { v ->
+                    vm.update({ it.copy(productNotifications = v) })
+                }
+            }
+            item {
+                SettingSwitch("Offers", "Discounts on GoldenPaw Plus. Off unless you turn it on.", s.offerNotifications) { v ->
+                    vm.update({ it.copy(offerNotifications = v) })
+                }
+            }
+
             item { SectionHeader("Appearance") }
             item {
                 Column(Modifier.padding(vertical = 4.dp)) {
@@ -312,6 +344,13 @@ fun SettingsScreen() {
             }
 
             item { SectionHeader("About") }
+            item {
+                SettingRow(
+                    title = "Replay the app tour",
+                    subtitle = "See the welcome tour and feature tips again",
+                    onClick = { vm.replayTour { actions.goHome() } },
+                )
+            }
             item { SettingRow(title = "Privacy & disclaimer", subtitle = "How GoldenPaw handles your data", onClick = { showAbout = true }) }
             item {
                 SettingRow(
@@ -400,6 +439,7 @@ fun SettingsScreen() {
 @Composable
 private fun SettingRow(
     title: String,
+    modifier: Modifier = Modifier,
     subtitle: String? = null,
     onClick: (() -> Unit)? = null,
     danger: Boolean = false,
@@ -407,7 +447,7 @@ private fun SettingRow(
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)

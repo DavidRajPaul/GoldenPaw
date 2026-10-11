@@ -158,6 +158,14 @@ data class UserSettings(
     val gamificationEnabled: Boolean = true,
     /** Rest days auto-applied to keep a streak alive (refilled weekly). */
     val streakRestDaysPerWeek: Int = 2,
+    /** The first-run feature tour has been shown (or skipped). */
+    val tourDone: Boolean = false,
+    /** Push: offers and discounts. Marketing, so it is opt-in (App Store guideline 4.5.4). */
+    val offerNotifications: Boolean = false,
+    /** Push: new features and app news. */
+    val productNotifications: Boolean = true,
+    /** Push: about the owner's account and care team (invites, subscription, backup). */
+    val accountNotifications: Boolean = true,
 )
 
 interface SettingsRepository {

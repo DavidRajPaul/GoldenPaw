@@ -31,7 +31,12 @@ class MainActivity : ComponentActivity() {
     /** Deep links from notifications, the widget and app shortcuts. */
     private fun handleIntent(intent: Intent?) {
         val open = intent?.getStringExtra(NotificationHelper.EXTRA_OPEN) ?: return
-        launchRequests.value = LaunchRequest(open, intent.getStringExtra(NotificationHelper.EXTRA_PET_ID), System.nanoTime())
+        launchRequests.value = LaunchRequest(
+            open = open,
+            petId = intent.getStringExtra(NotificationHelper.EXTRA_PET_ID),
+            nonce = System.nanoTime(),
+            offerId = intent.getStringExtra(NotificationHelper.EXTRA_OFFER_ID),
+        )
         intent.removeExtra(NotificationHelper.EXTRA_OPEN)
     }
 }

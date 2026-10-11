@@ -1,5 +1,8 @@
 package com.goldenpaw.ui.today
 
+import com.goldenpaw.ui.tour.FeatureTips
+import com.goldenpaw.ui.tour.coachMark
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -200,6 +203,7 @@ fun TodayScreen() {
             if (pet != null) {
                 ExtendedFloatingActionButton(
                     onClick = actions.openQuickLog,
+                    modifier = Modifier.coachMark(FeatureTips.QuickLog),
                     expanded = fabExpanded,
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     text = { Text("Quick log") },
@@ -264,7 +268,7 @@ fun TodayScreen() {
                     given = state.givenToday,
                     total = state.todaySlots.size,
                     onCheckIn = { actions.navigate(Route.CheckIn(pet.id)) },
-                    modifier = Modifier.staggerIn(stagger, "hero", 0),
+                    modifier = Modifier.staggerIn(stagger, "hero", 0).coachMark(FeatureTips.CheckIn),
                 )
             }
             if (gamification != null) {
@@ -340,7 +344,12 @@ fun TodayScreen() {
             }
 
             item(key = "meds-header", contentType = "section") {
-                SectionHeader(title = "Meds today", action = "Manage", onAction = { actions.navigate(Route.Meds(pet.id)) })
+                SectionHeader(
+                    title = "Meds today",
+                    action = "Manage",
+                    onAction = { actions.navigate(Route.Meds(pet.id)) },
+                    modifier = Modifier.coachMark(FeatureTips.Meds),
+                )
             }
             if (state.todaySlots.isEmpty() && state.asNeeded.isEmpty()) {
                 item(key = "meds-empty", contentType = "empty") {

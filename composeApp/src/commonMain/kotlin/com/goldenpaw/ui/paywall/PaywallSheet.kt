@@ -39,6 +39,12 @@ import kotlin.math.absoluteValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.goldenpaw.ui.designsystem.GpIcons
 import com.goldenpaw.ui.designsystem.IconBadge
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.style.TextDecoration
+import com.goldenpaw.domain.model.PricingCatalog
+import com.goldenpaw.domain.model.PricingPlan
+import com.goldenpaw.domain.model.PromoOffer
+import kotlinx.datetime.Instant
 
 
 private data class PlusFeature(val icon: ImageVector, val title: String, val body: String)
@@ -50,26 +56,29 @@ private val features = listOf(
     PlusFeature(GpIcons.Insights, "Deeper trends", "Longer history and side-by-side symptom and quality-of-life trends."),
 )
 
-private enum class Plan(val label: String, val price: String, val detail: String) {
-    YEARLY("Yearly", "$39.99 / year", "≈ $3.33 / month · save 44%"),
-    MONTHLY("Monthly", "$5.99 / month", "Cancel any time"),
-}
-
 /**
- * Soft paywall. Never blocks core logging; shown only when a Plus feature is used.
+ * Soft paywall. Never blocks core logging; shown only when a Plus feature is used, or when the owner
+ * taps an offer notification. Plans, prices, trial length, offers and button copy all come from the
+ * backend ([PricingCatalog]); the bundled default is used until the first fetch succeeds.
  * Feature cards use a parallax + subtle depth tilt driven by the pager offset.
  */
 @Composable
 fun PaywallSheet(
     reason: String,
     isPlus: Boolean,
-    onStartTrial: () -> Unit,
+    catalog: PricingCatalog,
+    now: Instant,
+    onStartTrial: (PricingPlan) -> Unit,
     onDismiss: () -> Unit,
+    offerId: String? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val pager = rememberPagerState { features.size }
     val reduceMotion = LocalReduceMotion.current
-    var plan by remember { mutableStateOf(Plan.YEARLY) }
+    val plans = catalog.visiblePlans
+    val offer = remember(catalog, offerId) { catalog.activeOffer(now, offerId) }
+    var planId by remember(catalog.version) { mutableStateOf(offer?.planId?.takeIf { id -> plans.any { it.id == id } } ?: catalog.defaultPlan.id) }
+    val plan = plans.firstOrNull { it.id == planId } ?: catalog.defaultPlan
     var unlocked by remember { mutableStateOf(isPlus) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -77,7 +86,7 @@ fun PaywallSheet(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("GoldenPaw Plus", style = MaterialTheme.typography.headlineSmall)
+            Text(catalog.paywall.headline, style = MaterialTheme.typography.headlineSmall)
             Text(
                 reason,
                 style = MaterialTheme.typography.bodyMedium,
@@ -85,6 +94,9 @@ fun PaywallSheet(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
             )
+            if (offer != null && !unlocked) {
+                OfferBanner(offer, Modifier.padding(horizontal = 24.dp, vertical = 6.dp))
+            }
             Spacer(Modifier.height(12.dp))
 
             HorizontalPager(
@@ -136,10 +148,11 @@ fun PaywallSheet(
                 Button(onClick = onDismiss, modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth().height(50.dp)) { Text("Continue") }
             } else {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Plan.entries.forEach { p ->
-                        val selected = plan == p
+                    plans.forEach { p ->
+                        val selected = plan.id == p.id
+                        val discounted = offer?.takeIf { it.planId == p.id && it.priceLabel.isNotBlank() }
                         Surface(
-                            onClick = { plan = p },
+                            onClick = { planId = p.id },
                             shape = MaterialTheme.shapes.medium,
                             color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
                             border = BorderStroke(
@@ -150,25 +163,75 @@ fun PaywallSheet(
                         ) {
                             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(p.label, style = MaterialTheme.typography.titleMedium)
-                                    Text(p.detail, style = MaterialTheme.typography.bodySmall)
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(p.title, style = MaterialTheme.typography.titleMedium)
+                                        val ribbon = discounted?.badge?.ifBlank { null } ?: p.badge
+                                        if (ribbon.isNotBlank()) Pill(ribbon)
+                                    }
+                                    if (p.detail.isNotBlank()) Text(p.detail, style = MaterialTheme.typography.bodySmall)
                                 }
-                                Text(p.price, fontWeight = FontWeight.SemiBold)
+                                Column(horizontalAlignment = Alignment.End) {
+                                    if (discounted != null) {
+                                        Text(discounted.priceLabel, fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            p.priceLabel,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textDecoration = TextDecoration.LineThrough,
+                                        )
+                                    } else {
+                                        Text(p.priceLabel, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
                             }
                         }
                     }
+                    val cta = if (plan.trialDays > 0) {
+                        catalog.paywall.trialCta.replace("{days}", plan.trialDays.toString())
+                    } else {
+                        catalog.paywall.buyCta
+                    }
                     Button(
-                        onClick = { onStartTrial(); unlocked = true },
+                        onClick = { onStartTrial(plan); unlocked = true },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
-                    ) { Text("Start 7-day free trial") }
+                    ) { Text(cta) }
                     Text(
-                        "Free for 7 days, then ${plan.price}. Cancel any time in Google Play before the trial ends and you won't be charged. " +
-                            "Medication reminders and daily logging always stay free.",
+                        paywallTerms(plan, offer) + " " + catalog.paywall.footer,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
                     TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Not now") }
+                }
+            }
+        }
+    }
+}
+
+/** The small print under the button: what happens after the trial, in the plan's own words. */
+internal fun paywallTerms(plan: PricingPlan, offer: PromoOffer?): String {
+    val price = offer?.takeIf { it.planId == plan.id && it.priceLabel.isNotBlank() }?.priceLabel ?: plan.priceLabel
+    return if (plan.trialDays > 0) {
+        "Free for ${plan.trialDays} days, then $price. Cancel any time in your app store settings before the trial ends and you won't be charged."
+    } else {
+        "$price. Cancel any time in your app store settings."
+    }
+}
+
+@Composable
+private fun OfferBanner(offer: PromoOffer, modifier: Modifier = Modifier) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconBadge(GpIcons.Sparkle, size = 40.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(offer.title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                if (offer.body.isNotBlank()) {
+                    Text(offer.body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
                 }
             }
         }

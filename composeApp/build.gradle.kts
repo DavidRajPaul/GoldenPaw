@@ -69,6 +69,7 @@ kotlin {
             implementation(libs.androidx.glance.material3)
             implementation(libs.mlkit.document.scanner)
             implementation(libs.mlkit.text.recognition)
+            implementation(libs.firebase.messaging)
             implementation(libs.koin.android)
             implementation(libs.kotlinx.coroutines.android)
         }

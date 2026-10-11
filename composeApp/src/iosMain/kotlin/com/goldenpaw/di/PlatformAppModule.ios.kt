@@ -1,5 +1,8 @@
 package com.goldenpaw.di
 
+import com.goldenpaw.domain.repository.PushPlatform
+import com.goldenpaw.platform.IosPushPlatform
+
 import com.goldenpaw.domain.repository.ReminderGateway
 import com.goldenpaw.platform.IosPlatformServices
 import com.goldenpaw.platform.IosReminderScheduler
@@ -17,4 +20,5 @@ actual val platformAppModule: Module = module {
     single<PlatformServices> { IosPlatformServices(get()) }
     single<PageImageProcessor> { IosPageImageProcessor() }
     single<DocumentTextReader> { VisionTextReader() }
+    single<PushPlatform> { IosPushPlatform }
 }

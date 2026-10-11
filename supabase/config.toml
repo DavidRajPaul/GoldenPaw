@@ -3,3 +3,7 @@ project_id = "goldenpaw"
 
 [functions.weekly-summary]
 verify_jwt = true
+
+# Admin-only: authenticates with PUSH_ADMIN_TOKEN instead of a user JWT.
+[functions.send-push]
+verify_jwt = false

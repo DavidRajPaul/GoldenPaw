@@ -1,5 +1,8 @@
 package com.goldenpaw.di
 
+import com.goldenpaw.domain.repository.NoPushPlatform
+import com.goldenpaw.domain.repository.PushPlatform
+
 import com.goldenpaw.domain.repository.ReminderGateway
 import com.goldenpaw.platform.DesktopNotifier
 import com.goldenpaw.platform.DesktopPlatformServices
@@ -19,4 +22,6 @@ actual val platformAppModule: Module = module {
     single<PlatformServices> { DesktopPlatformServices(get()) }
     single<PageImageProcessor> { DesktopPageImageProcessor() }
     single<DocumentTextReader> { NoTextReader }
+    // Desktop has no push; pricing and everything else still work.
+    single<PushPlatform> { NoPushPlatform }
 }

@@ -89,6 +89,14 @@ import com.goldenpaw.ui.designsystem.ChoreographedSplash
 import com.goldenpaw.ui.navigation.GpBottomBar
 import com.goldenpaw.ui.records.RecordDetailScreen
 import com.goldenpaw.ui.records.RecordScanScreen
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.SideEffect
+import com.goldenpaw.data.settings.FeatureTipsStore
+import com.goldenpaw.ui.tour.AppTour
+import com.goldenpaw.ui.tour.CoachMarkController
+import com.goldenpaw.ui.tour.CoachMarkHost
+import com.goldenpaw.ui.tour.LocalCoachMarks
+import kotlinx.datetime.Clock
 
 /** App-scoped gamification state for any screen that wants it (null in gentle mode). */
 val LocalGamification = staticCompositionLocalOf<GamificationState?> { null }
@@ -156,7 +164,21 @@ private fun AppContent(
     val celebrations by gamificationVm.celebrations.collectAsStateWithLifecycle()
     val navigator = remember { Navigator(if (state.settings.onboardingDone) Route.Today else Route.Onboarding) }
     var paywallReason by remember { mutableStateOf<String?>(null) }
+    var paywallOfferId by remember { mutableStateOf<String?>(null) }
     var quickLogOpen by rememberSaveable { mutableStateOf(false) }
+    val pricing by appVm.pricingCatalog.collectAsStateWithLifecycle()
+
+    // First-run tour and one-time feature tips.
+    val tipsStore: FeatureTipsStore = koinInject()
+    val coachMarks = remember { CoachMarkController() }
+    val seenTips: Set<String>? by tipsStore.seen.collectAsStateWithLifecycle(initialValue = null)
+    val tipScope = rememberCoroutineScope()
+    val showTour = state.settings.onboardingDone && !state.settings.tourDone && state.pets.isNotEmpty() && navigator.isTopLevel
+    val tipsAllowed = state.settings.tourDone && !showTour && paywallReason == null && !quickLogOpen && celebrations.isEmpty()
+    SideEffect {
+        coachMarks.seen = seenTips
+        coachMarks.enabled = tipsAllowed
+    }
 
     val actions = remember(navigator) {
         AppActions(
@@ -184,12 +206,17 @@ private fun AppContent(
             LaunchRequest.OPEN_QUICK_LOG -> quickLogOpen = true
             LaunchRequest.OPEN_WEEKLY -> navigator.switchTab(Route.Insights)
             LaunchRequest.OPEN_CARE_TEAM -> navigator.navigate(Route.CareTeam)
+            LaunchRequest.OPEN_SETTINGS -> navigator.switchTab(Route.Settings)
+            LaunchRequest.OPEN_PAYWALL -> {
+                paywallOfferId = r.offerId
+                paywallReason = "Everything in GoldenPaw Plus, for every pet you care for."
+            }
             else -> navigator.switchTab(Route.Today)
         }
         onLaunchRequestHandled()
     }
 
-    CompositionLocalProvider(LocalAppActions provides actions) {
+    CompositionLocalProvider(LocalAppActions provides actions, LocalCoachMarks provides coachMarks) {
         Scaffold(
             bottomBar = {
                 AnimatedVisibility(
@@ -243,8 +270,14 @@ private fun AppContent(
             PaywallSheet(
                 reason = reason,
                 isPlus = state.settings.isPlus,
+                catalog = pricing,
+                now = Clock.System.now(),
+                offerId = paywallOfferId,
                 onStartTrial = { appVm.startTrial() },
-                onDismiss = { paywallReason = null },
+                onDismiss = {
+                    paywallReason = null
+                    paywallOfferId = null
+                },
             )
         }
         if (quickLogOpen) {
@@ -259,6 +292,10 @@ private fun AppContent(
                     navigator.navigate(Route.Achievements)
                 },
             )
+        }
+        CoachMarkHost(coachMarks, onSeen = { id -> tipScope.launch { tipsStore.markSeen(id) } })
+        AnimatedVisibility(visible = showTour, enter = fadeIn(tween(Motion.MEDIUM2)), exit = fadeOut(tween(Motion.MEDIUM2))) {
+            AppTour(petName = state.selectedPet?.name, onFinish = { offers -> appVm.finishTour(offers) })
         }
     }
 }
