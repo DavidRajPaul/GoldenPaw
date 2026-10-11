@@ -11,6 +11,7 @@ import platform.Foundation.NSLocale
 import platform.Foundation.currentLocale
 import platform.Foundation.localeIdentifier
 import platform.UIKit.UIApplication
+import platform.UIKit.registerForRemoteNotifications
 
 /**
  * iOS push goes straight through APNs (no Firebase SDK). Asking for a token doesn't prompt the user:
