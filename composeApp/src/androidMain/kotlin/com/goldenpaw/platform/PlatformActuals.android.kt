@@ -7,7 +7,12 @@ import android.graphics.Color as AndroidColor
 import android.graphics.pdf.PdfRenderer
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -190,12 +195,34 @@ actual fun platformDynamicColorScheme(dark: Boolean): ColorScheme? {
     return if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
 }
 
+/**
+ * Reactive: "Remove animations" (Accessibility) and "Animator duration scale: off" (Developer
+ * options) both set ANIMATOR_DURATION_SCALE to 0. A ContentObserver picks up changes while the app
+ * runs; the value is also re-read on resume in case a change was missed while stopped.
+ */
 @Composable
 actual fun systemPrefersReducedMotion(): Boolean {
     val context = LocalContext.current
-    return remember(context) {
-        runCatching {
-            Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
-        }.getOrDefault(false)
+    val resolver = context.contentResolver
+    fun read(): Boolean = runCatching {
+        Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    }.getOrDefault(false)
+
+    var reduced by remember(resolver) { mutableStateOf(read()) }
+    DisposableEffect(resolver) {
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                reduced = read()
+            }
+        }
+        val registered = runCatching {
+            resolver.registerContentObserver(Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, observer)
+        }.isSuccess
+        onDispose { if (registered) resolver.unregisterContentObserver(observer) }
     }
+    LifecycleResumeEffect(resolver) {
+        reduced = read()
+        onPauseOrDispose { }
+    }
+    return reduced
 }

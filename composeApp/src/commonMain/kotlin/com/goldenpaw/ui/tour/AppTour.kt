@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.tour
 
+import com.goldenpaw.ui.designsystem.rememberAmbientTransition
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -8,7 +10,10 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.snap
+import androidx.compose.ui.unit.Dp
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -254,22 +259,22 @@ private fun StayInTheLoop(offers: Boolean, onOffers: (Boolean) -> Unit, illustra
  */
 @Composable
 internal fun OrbitIllustration(icon: ImageVector, satellites: List<ImageVector>, modifier: Modifier = Modifier) {
-    val reduceMotion = LocalReduceMotion.current
-    val transition = rememberInfiniteTransition(label = "orbit")
-    val angle by transition.animateFloat(
+    // Not created at all under reduced motion: the illustration is then static.
+    val transition = rememberAmbientTransition(label = "orbit")
+    val angle = transition?.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(tween(24_000, easing = LinearEasing)),
         label = "angle",
     )
-    val breath by transition.animateFloat(
+    val breath = transition?.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(2_400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "breath",
     )
-    val a = if (reduceMotion) 30f else angle
-    val b = if (reduceMotion) 0.5f else breath
+    val a = angle?.value ?: 30f
+    val b = breath?.value ?: 0.5f
     val ring = MaterialTheme.colorScheme.primary
     val disc = MaterialTheme.colorScheme.primaryContainer
     val onDisc = MaterialTheme.colorScheme.onPrimaryContainer
@@ -309,10 +314,16 @@ internal fun OrbitIllustration(icon: ImageVector, satellites: List<ImageVector>,
 
 @Composable
 private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
+    val reduceMotion = LocalReduceMotion.current
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         repeat(count) { i ->
             val selected = i == current
-            val width by animateDpAsState(if (selected) 22.dp else 8.dp, label = "dotWidth")
+            // Size change: snaps under reduced motion (the colour change still shows the page).
+            val width by animateDpAsState(
+                if (selected) 22.dp else 8.dp,
+                animationSpec = if (reduceMotion) snap() else spring(visibilityThreshold = Dp.VisibilityThreshold),
+                label = "dotWidth",
+            )
             val color by animateColorAsState(
                 if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                 label = "dotColor",

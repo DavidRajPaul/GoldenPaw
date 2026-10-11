@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.achievements
 
+import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -196,7 +198,7 @@ private fun AchievementsContent(g: GamificationState, padding: PaddingValues) {
             )
         }
         items(g.badges, key = { it.badge.id }) { b ->
-            BadgeTile(b, Modifier.animateItem())
+            BadgeTile(b, motionAwareAnimateItem())
         }
     }
 }

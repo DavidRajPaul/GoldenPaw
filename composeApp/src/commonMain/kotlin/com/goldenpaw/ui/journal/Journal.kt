@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.journal
 
+import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -252,7 +254,7 @@ fun JournalScreen() {
                     GpCard(
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                         contentPadding = PaddingValues(14.dp),
-                        modifier = Modifier.animateItem(),
+                        modifier = motionAwareAnimateItem(),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(p.type.icon, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -292,13 +294,13 @@ fun JournalScreen() {
                         Formats.relativeDay(date, today),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 10.dp).animateItem(),
+                        modifier = Modifier.padding(top = 10.dp).then(motionAwareAnimateItem()),
                     )
                 }
                 dayItems.forEach { journalItem ->
                     val i = index++
                     item(key = journalItem.key, contentType = journalItem::class.simpleName) {
-                        val mod = Modifier.animateItem().staggerIn(stagger, journalItem.key, i)
+                        val mod = motionAwareAnimateItem().staggerIn(stagger, journalItem.key, i)
                         when (val item = journalItem) {
                             is JournalItem.Symptom -> SymptomCard(item.entry, state.team, mod) {
                                 actions.navigate(Route.SymptomEdit(pet.id, item.entry.id))

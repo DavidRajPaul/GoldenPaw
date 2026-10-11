@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.pets
 
+import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -124,7 +126,7 @@ fun PetsScreen() {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(state.active, key = { it.id }) { pet ->
-                PetCard(pet, isCurrent = pet.id == state.selectedId, today = state.today ?: return@items, modifier = Modifier.animateItem()) { actions.navigate(Route.PetDetail(pet.id)) }
+                PetCard(pet, isCurrent = pet.id == state.selectedId, today = state.today ?: return@items, modifier = motionAwareAnimateItem()) { actions.navigate(Route.PetDetail(pet.id)) }
             }
             if (state.archived.isNotEmpty()) {
                 item { SectionHeader("Memories") }

@@ -1,12 +1,13 @@
 package com.goldenpaw.ui.tour
 
+import com.goldenpaw.ui.designsystem.rememberAmbientTransition
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -200,8 +201,9 @@ fun CoachMarkHost(controller: CoachMarkController, onSeen: (String) -> Unit) {
 @Composable
 private fun Spotlight(tip: FeatureTip, anchor: Rect, onDismiss: () -> Unit) {
     val reduceMotion = LocalReduceMotion.current
-    val pulse = rememberInfiniteTransition(label = "coachPulse")
-    val p by pulse.animateFloat(
+    // Not created at all under reduced motion (no pulse ring is drawn then).
+    val pulse = rememberAmbientTransition(label = "coachPulse")
+    val pulseProgress = pulse?.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(1_600, easing = FastOutSlowInEasing), RepeatMode.Restart),
@@ -221,7 +223,8 @@ private fun Spotlight(tip: FeatureTip, anchor: Rect, onDismiss: () -> Unit) {
             val corner = CornerRadius(minOf(hole.height, hole.width) / 2f, minOf(hole.height, hole.width) / 2f)
             drawRect(scrim)
             drawRoundRect(Color.Black, topLeft = hole.topLeft, size = hole.size, cornerRadius = corner, blendMode = BlendMode.Clear)
-            if (!reduceMotion) {
+            if (pulseProgress != null) {
+                val p = pulseProgress.value
                 val grow = 14.dp.toPx() * p
                 drawRoundRect(
                     color = ring.copy(alpha = 0.8f * (1f - p)),

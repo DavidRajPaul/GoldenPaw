@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.insights
 
+import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -211,7 +213,7 @@ private fun WeeklyTab(state: InsightsState, weekly: WeeklyUiState, padding: Padd
                 Text("Earlier weeks", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 6.dp))
             }
             items(older, key = { "w-${it.id}" }) { s ->
-                GpCard(onClick = { vm.loadWeek(s.weekStart) }, contentPadding = PaddingValues(14.dp), modifier = Modifier.animateItem()) {
+                GpCard(onClick = { vm.loadWeek(s.weekStart) }, contentPadding = PaddingValues(14.dp), modifier = motionAwareAnimateItem()) {
                     Text(Fmt.range(s.weekStart, s.weekStart.plusDays(6)), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Text(s.headline, style = MaterialTheme.typography.titleSmall)
                 }
@@ -453,7 +455,7 @@ private fun WeightTab(
             }
         }
         items(state.weights.reversed(), key = { it.id }) { w ->
-            GpCard(contentPadding = PaddingValues(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), modifier = Modifier.animateItem()) {
+            GpCard(contentPadding = PaddingValues(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), modifier = motionAwareAnimateItem()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(UnitConversion.format(w.weightKg, state.unit), style = MaterialTheme.typography.titleSmall)

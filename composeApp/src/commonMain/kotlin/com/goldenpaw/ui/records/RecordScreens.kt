@@ -1,5 +1,8 @@
 package com.goldenpaw.ui.records
 
+import com.goldenpaw.ui.designsystem.reducedOr
+import com.goldenpaw.ui.designsystem.ReducedMotion
+
 import com.goldenpaw.ui.tour.FeatureTips
 import com.goldenpaw.ui.tour.coachMark
 
@@ -559,7 +562,11 @@ private fun DetailsStep(state: RecordEditorState, vm: RecordEditorViewModel) {
         )
 
         val showVaccines = state.type == DocumentType.VACCINE_CARD || state.vaccines.isNotEmpty()
-        AnimatedVisibility(visible = showVaccines, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+        AnimatedVisibility(
+            visible = showVaccines,
+            enter = reducedOr(fadeIn() + expandVertically()),
+            exit = reducedOr(fadeOut() + shrinkVertically()),
+        ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionHeader("Vaccines & treatments")
                 state.vaccines.forEach { v -> VaccineRow(v, today, vm) }
@@ -691,7 +698,7 @@ private fun RecognizedTextCard(text: String) {
             Text("Text read from the scan", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
             Text(if (open) "Hide" else "Show", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
-        AnimatedVisibility(open) {
+        AnimatedVisibility(open, enter = reducedOr(ReducedMotion.columnEnter), exit = reducedOr(ReducedMotion.columnExit)) {
             Text(
                 text,
                 style = MaterialTheme.typography.bodySmall,

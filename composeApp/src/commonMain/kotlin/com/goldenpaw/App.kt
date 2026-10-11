@@ -1,5 +1,7 @@
 package com.goldenpaw
 
+import com.goldenpaw.ui.designsystem.reducedOr
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -221,8 +223,8 @@ private fun AppContent(
             bottomBar = {
                 AnimatedVisibility(
                     visible = navigator.isTopLevel,
-                    enter = slideInVertically(Motion.spatialDefault()) { it } + fadeIn(),
-                    exit = slideOutVertically(Motion.spatialFast()) { it } + fadeOut(),
+                    enter = reducedOr(slideInVertically(Motion.spatialDefault()) { it } + fadeIn()),
+                    exit = reducedOr(slideOutVertically(Motion.spatialFast()) { it } + fadeOut()),
                 ) {
                     GpBottomBar(current = navigator.current.route, onSelect = { navigator.switchTab(it) })
                 }
