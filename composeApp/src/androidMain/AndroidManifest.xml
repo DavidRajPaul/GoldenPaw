@@ -74,6 +74,24 @@
                 android:resource="@xml/today_widget_info" />
         </receiver>
 
+        <!-- Push (FCM). Firebase is initialised in code only when the build has Firebase keys. -->
+        <service
+            android:name=".push.GoldenPawMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="firebase_messaging_auto_init_enabled"
+            android:value="false" />
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="push_product" />
+
         <!-- Download the on-device text recognition model with the app instead of on first scan. -->
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"

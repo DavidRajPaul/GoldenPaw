@@ -15,23 +15,33 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.Instant
 
+/**
+ * The slice of the key-value store that small services (pricing cache, push registration, feature
+ * tips) depend on, so they can be unit-tested with an in-memory map.
+ */
+interface KeyValues {
+    fun observe(): Flow<Map<String, String>>
+    suspend fun get(key: String): String?
+    suspend fun put(key: String, value: String?)
+}
+
 /** Small key-value store on top of the `app_settings` table (shared by settings, session and sync cursors). */
-class KeyValueStore(private val dao: SettingsDao) {
+class KeyValueStore(private val dao: SettingsDao) : KeyValues {
     private val mutex = Mutex()
 
-    fun observe(): Flow<Map<String, String>> = dao.observeAll().map { list -> list.associate { it.key to it.value } }
+    override fun observe(): Flow<Map<String, String>> = dao.observeAll().map { list -> list.associate { it.key to it.value } }
 
     suspend fun all(): Map<String, String> = dao.all().associate { it.key to it.value }
 
-    suspend fun get(key: String): String? = dao.get(key)
+    override suspend fun get(key: String): String? = dao.get(key)
 
-    suspend fun put(values: Map<String, String?>) = mutex.withLock {
+    suspend fun put(values: Map<String, String?>): Unit = mutex.withLock {
         val (removed, kept) = values.entries.partition { it.value == null }
         if (kept.isNotEmpty()) dao.upsertAll(kept.map { SettingEntity(it.key, it.value!!) })
         if (removed.isNotEmpty()) dao.delete(removed.map { it.key })
     }
 
-    suspend fun put(key: String, value: String?) = put(mapOf(key to value))
+    override suspend fun put(key: String, value: String?): Unit = put(mapOf(key to value))
 
     /** Read-modify-write under the store lock. */
     suspend fun <T> edit(block: suspend (Map<String, String>) -> Pair<Map<String, String?>, T>): T = mutex.withLock {
@@ -68,12 +78,16 @@ class SettingsRepositoryImpl(private val store: KeyValueStore) : SettingsReposit
         const val ACTIVE_CAREGIVER_ID = "active_caregiver_id"
         const val GAMIFICATION_ENABLED = "gamification_enabled"
         const val STREAK_REST_DAYS = "streak_rest_days_per_week"
+        const val TOUR_DONE = "tour_done"
+        const val PUSH_OFFERS = "push_offers"
+        const val PUSH_PRODUCT = "push_product"
+        const val PUSH_ACCOUNT = "push_account"
 
         val all = listOf(
             ONBOARDING_DONE, OWNER_NAME, SELECTED_PET_ID, WEIGHT_UNIT, THEME_MODE, DYNAMIC_COLOR, REDUCE_MOTION,
             REMINDERS_ENABLED, CHECKIN_REMINDER_ENABLED, CHECKIN_REMINDER_MINUTES, WEEKLY_SUMMARY_ENABLED, IS_PLUS,
             PAYWALL_VIEWS, PAYWALL_TRIAL_TAPS, LAST_MILESTONE_SEEN, LAST_SYNCED_AT, ACTIVE_CAREGIVER_ID,
-            GAMIFICATION_ENABLED, STREAK_REST_DAYS,
+            GAMIFICATION_ENABLED, STREAK_REST_DAYS, TOUR_DONE, PUSH_OFFERS, PUSH_PRODUCT, PUSH_ACCOUNT,
         )
     }
 
@@ -116,6 +130,10 @@ class SettingsRepositoryImpl(private val store: KeyValueStore) : SettingsReposit
                 activeCaregiverId = this[Keys.ACTIVE_CAREGIVER_ID],
                 gamificationEnabled = bool(Keys.GAMIFICATION_ENABLED, true),
                 streakRestDaysPerWeek = int(Keys.STREAK_REST_DAYS, 2),
+                tourDone = bool(Keys.TOUR_DONE, false),
+                offerNotifications = bool(Keys.PUSH_OFFERS, false),
+                productNotifications = bool(Keys.PUSH_PRODUCT, true),
+                accountNotifications = bool(Keys.PUSH_ACCOUNT, true),
             )
         }
 
@@ -139,6 +157,10 @@ class SettingsRepositoryImpl(private val store: KeyValueStore) : SettingsReposit
             Keys.ACTIVE_CAREGIVER_ID to activeCaregiverId,
             Keys.GAMIFICATION_ENABLED to gamificationEnabled.toString(),
             Keys.STREAK_REST_DAYS to streakRestDaysPerWeek.toString(),
+            Keys.TOUR_DONE to tourDone.toString(),
+            Keys.PUSH_OFFERS to offerNotifications.toString(),
+            Keys.PUSH_PRODUCT to productNotifications.toString(),
+            Keys.PUSH_ACCOUNT to accountNotifications.toString(),
         )
     }
 }

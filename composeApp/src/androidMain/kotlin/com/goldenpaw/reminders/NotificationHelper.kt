@@ -17,6 +17,8 @@ import com.goldenpaw.R
 import com.goldenpaw.core.format12h
 import com.goldenpaw.core.toLocalTime
 import com.goldenpaw.domain.model.Medication
+import com.goldenpaw.domain.model.PushCategory
+import com.goldenpaw.domain.model.PushMessage
 import com.goldenpaw.domain.model.VetVisit
 import com.goldenpaw.ui.LaunchRequest
 import kotlinx.datetime.Instant
@@ -31,9 +33,13 @@ class NotificationHelper(private val context: Context) {
         const val CHANNEL_WEEKLY = "weekly"
         const val CHANNEL_VET = "vet"
         const val CHANNEL_GENERAL = "general"
+        const val CHANNEL_ACCOUNT = "push_account"
+        const val CHANNEL_PRODUCT = "push_product"
+        const val CHANNEL_OFFERS = "push_offers"
         const val GROUP_MEDS = "com.goldenpaw.MEDS"
         const val EXTRA_OPEN = "open"
         const val EXTRA_PET_ID = "petId"
+        const val EXTRA_OFFER_ID = "offerId"
 
         fun doseNotificationId(medicationId: String, scheduledAt: Instant): Int =
             ("dose:$medicationId@${scheduledAt.toEpochMilliseconds()}").hashCode()
@@ -70,6 +76,15 @@ class NotificationHelper(private val context: Context) {
                     description = "The day before an appointment"
                 },
                 NotificationChannel(CHANNEL_GENERAL, "General", NotificationManager.IMPORTANCE_LOW),
+                NotificationChannel(CHANNEL_ACCOUNT, "Care team & account", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = "Invites, changes to your care team, backup and subscription"
+                },
+                NotificationChannel(CHANNEL_PRODUCT, "New features & tips", NotificationManager.IMPORTANCE_LOW).apply {
+                    description = "Now and then, when something useful arrives"
+                },
+                NotificationChannel(CHANNEL_OFFERS, "Offers", NotificationManager.IMPORTANCE_LOW).apply {
+                    description = "Discounts on GoldenPaw Plus (only if you turned offers on)"
+                },
             ),
         )
     }
@@ -83,11 +98,12 @@ class NotificationHelper(private val context: Context) {
         return true
     }
 
-    fun openAppIntent(open: String, petId: String?, requestCode: Int): PendingIntent {
+    fun openAppIntent(open: String, petId: String?, requestCode: Int, offerId: String? = null): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra(EXTRA_OPEN, open)
             if (petId != null) putExtra(EXTRA_PET_ID, petId)
+            if (offerId != null) putExtra(EXTRA_OFFER_ID, offerId)
         }
         return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
@@ -188,6 +204,27 @@ class NotificationHelper(private val context: Context) {
             .setContentIntent(openAppIntent(LaunchRequest.OPEN_CHECKIN, petId, CHECKIN_NOTIFICATION_ID))
             .build()
         manager.notify(CHECKIN_NOTIFICATION_ID, notification)
+    }
+
+    /** A remote notification (already checked against the owner's category choices). */
+    @SuppressLint("MissingPermission")
+    fun showPush(message: PushMessage) {
+        if (!canPost() || message.title.isBlank()) return
+        val channel = when (message.category) {
+            PushCategory.OFFERS -> CHANNEL_OFFERS
+            PushCategory.PRODUCT -> CHANNEL_PRODUCT
+            PushCategory.ACCOUNT -> CHANNEL_ACCOUNT
+        }
+        val id = ("push:" + (message.campaignId ?: message.title)).hashCode()
+        val notification = NotificationCompat.Builder(context, channel)
+            .setSmallIcon(R.drawable.ic_stat_paw)
+            .setContentTitle(message.title)
+            .setContentText(message.body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message.body))
+            .setAutoCancel(true)
+            .setContentIntent(openAppIntent(message.open, message.petId, id, message.offerId))
+            .build()
+        manager.notify(id, notification)
     }
 
     @SuppressLint("MissingPermission")

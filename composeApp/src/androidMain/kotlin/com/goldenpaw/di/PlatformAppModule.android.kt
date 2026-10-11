@@ -1,5 +1,8 @@
 package com.goldenpaw.di
 
+import com.goldenpaw.domain.repository.PushPlatform
+import com.goldenpaw.push.AndroidPushPlatform
+
 import com.goldenpaw.domain.repository.ReminderGateway
 import com.goldenpaw.platform.AndroidPlatformServices
 import com.goldenpaw.platform.LegacySettingsMigrator
@@ -21,4 +24,5 @@ actual val platformAppModule: Module = module {
     single { LegacySettingsMigrator(get(), get()) }
     single<PageImageProcessor> { AndroidPageImageProcessor() }
     single<DocumentTextReader> { MlKitTextReader(get()) }
+    single<PushPlatform> { AndroidPushPlatform(get(), get()) }
 }

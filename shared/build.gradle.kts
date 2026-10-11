@@ -16,6 +16,14 @@ plugins {
 //
 //   local.properties:  supabase.url=https://xyzcompany.supabase.co
 //                      supabase.anonKey=eyJhbGciOi...
+//
+// Push on Android (Firebase Cloud Messaging). From Firebase console → Project settings → your
+// Android app. Blank = no push on Android (everything else still works):
+//                      firebase.projectId=goldenpaw-prod
+//                      firebase.androidAppId=1:1234567890:android:abc123
+//                      firebase.apiKey=AIza...
+//                      firebase.senderId=1234567890
+// iOS push uses APNs directly (no Firebase SDK); its keys live only on the server.
 // ---------------------------------------------------------------------------------------------
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
@@ -26,6 +34,10 @@ fun configValue(prop: String, env: String): String =
 
 val supabaseUrl = configValue("supabase.url", "GOLDENPAW_SUPABASE_URL")
 val supabaseAnonKey = configValue("supabase.anonKey", "GOLDENPAW_SUPABASE_ANON_KEY")
+val firebaseProjectId = configValue("firebase.projectId", "GOLDENPAW_FIREBASE_PROJECT_ID")
+val firebaseAndroidAppId = configValue("firebase.androidAppId", "GOLDENPAW_FIREBASE_ANDROID_APP_ID")
+val firebaseApiKey = configValue("firebase.apiKey", "GOLDENPAW_FIREBASE_API_KEY")
+val firebaseSenderId = configValue("firebase.senderId", "GOLDENPAW_FIREBASE_SENDER_ID")
 val appVersionName = providers.gradleProperty("goldenpaw.versionName").getOrElse("1.0.0")
 val appVersionCode = providers.gradleProperty("goldenpaw.versionCode").getOrElse("1")
 
@@ -39,6 +51,14 @@ val generateAppConfig by tasks.registering {
     inputs.property("key", key)
     inputs.property("versionName", versionName)
     inputs.property("versionCode", versionCode)
+    val fbProject = firebaseProjectId
+    val fbAppId = firebaseAndroidAppId
+    val fbApiKey = firebaseApiKey
+    val fbSender = firebaseSenderId
+    inputs.property("fbProject", fbProject)
+    inputs.property("fbAppId", fbAppId)
+    inputs.property("fbApiKey", fbApiKey)
+    inputs.property("fbSender", fbSender)
     outputs.dir(outDir)
     doLast {
         val file = outDir.get().file("com/goldenpaw/config/AppConfig.kt").asFile
@@ -55,6 +75,12 @@ val generateAppConfig by tasks.registering {
             |    const val SUPABASE_URL: String = "${esc(url)}"
             |    const val SUPABASE_ANON_KEY: String = "${esc(key)}"
             |    val isCloudConfigured: Boolean get() = SUPABASE_URL.isNotBlank() && SUPABASE_ANON_KEY.isNotBlank()
+            |    const val FIREBASE_PROJECT_ID: String = "${esc(fbProject)}"
+            |    const val FIREBASE_ANDROID_APP_ID: String = "${esc(fbAppId)}"
+            |    const val FIREBASE_API_KEY: String = "${esc(fbApiKey)}"
+            |    const val FIREBASE_SENDER_ID: String = "${esc(fbSender)}"
+            |    val isFirebaseConfigured: Boolean get() =
+            |        FIREBASE_PROJECT_ID.isNotBlank() && FIREBASE_ANDROID_APP_ID.isNotBlank() && FIREBASE_API_KEY.isNotBlank()
             |}
             """.trimMargin() + "\n",
         )

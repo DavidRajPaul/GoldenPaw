@@ -79,3 +79,35 @@ interface SummaryGenerator {
     val isAvailable: Boolean
     suspend fun generate(digest: WeeklyDigest, unit: WeightUnit): Result<WeeklySummary>
 }
+
+/** Backend-configured plans, prices and offers for the paywall (cached; never blocks the UI). */
+interface PricingRepository {
+    /** Always has a value: the cached catalog, or the bundled default. */
+    val catalog: StateFlow<com.goldenpaw.domain.model.PricingCatalog>
+    /** Loads the cached catalog. Called once at startup. */
+    suspend fun restore()
+    /** Fetches the latest catalog; keeps the current one on failure. */
+    suspend fun refresh(): Result<com.goldenpaw.domain.model.PricingCatalog>
+}
+
+/**
+ * The OS side of push (FCM on Android, APNs on iOS, nothing on Desktop). Tokens it obtains are
+ * handed to [com.goldenpaw.data.remote.PushRegistrationService], which registers the device.
+ */
+interface PushPlatform {
+    /** "android" | "ios" | "desktop" (matches devices.platform). */
+    val platform: String
+    /** False when the build has no push keys or the platform has no push. */
+    val isSupported: Boolean
+    /** BCP-47 language tag of the device, e.g. "en-IN". */
+    val locale: String
+    /** Asks the OS for a token. Safe to call on every launch; tokens arrive asynchronously. */
+    fun requestToken()
+}
+
+object NoPushPlatform : PushPlatform {
+    override val platform: String = "desktop"
+    override val isSupported: Boolean = false
+    override val locale: String = ""
+    override fun requestToken() = Unit
+}

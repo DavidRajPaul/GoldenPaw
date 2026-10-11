@@ -21,8 +21,8 @@ fun initKoin() {
     val koin = startKoin { modules(allModules()) }.koin
     val reminders = koin.get<IosReminderScheduler>()
     reminders.registerCategories()
-    val delegate = IosNotificationDelegate(koin.get(), koin.get()) { open, petId ->
-        launchRequests.value = LaunchRequest(open, petId, (NSDate().timeIntervalSince1970 * 1000).toLong())
+    val delegate = IosNotificationDelegate(koin.get(), koin.get()) { open, petId, offerId ->
+        launchRequests.value = LaunchRequest(open, petId, (NSDate().timeIntervalSince1970 * 1000).toLong(), offerId)
     }
     notificationDelegate = delegate // UNUserNotificationCenter holds its delegate weakly
     UNUserNotificationCenter.currentNotificationCenter().delegate = delegate

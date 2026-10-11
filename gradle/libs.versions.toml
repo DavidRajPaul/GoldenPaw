@@ -20,6 +20,8 @@ androidxGlance = "1.1.1"
 # Google Play services (~300 KB in the APK; models download on first use / install).
 mlkitDocumentScanner = "16.0.0"
 mlkitTextRecognition = "19.0.0"
+# Push on Android (FCM). Initialised in code from AppConfig, so no google-services plugin/json needed.
+firebaseMessaging = "24.1.0"
 
 room = "2.7.2"
 sqlite = "2.5.2"
@@ -39,6 +41,7 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "androidxGlance" }
 androidx-glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "androidxGlance" }
 mlkit-document-scanner = { module = "com.google.android.gms:play-services-mlkit-document-scanner", version.ref = "mlkitDocumentScanner" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebaseMessaging" }
 mlkit-text-recognition = { module = "com.google.android.gms:play-services-mlkit-text-recognition", version.ref = "mlkitTextRecognition" }
 
 # Compose Multiplatform extras

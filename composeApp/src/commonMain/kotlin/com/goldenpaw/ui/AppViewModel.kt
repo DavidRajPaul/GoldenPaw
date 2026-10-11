@@ -10,7 +10,12 @@ import com.goldenpaw.domain.model.Badge
 import com.goldenpaw.domain.model.DoseSlot
 import com.goldenpaw.domain.model.GamificationState
 import com.goldenpaw.domain.model.Pet
+import com.goldenpaw.data.remote.PushRegistrationService
+import com.goldenpaw.domain.model.PricingCatalog
+import com.goldenpaw.domain.model.PushMessage
 import com.goldenpaw.domain.repository.CareSyncRepository
+import com.goldenpaw.domain.repository.PricingRepository
+import com.goldenpaw.domain.repository.PushPlatform
 import com.goldenpaw.domain.repository.HouseholdRepository
 import com.goldenpaw.domain.repository.PetRepository
 import com.goldenpaw.domain.repository.ReminderGateway
@@ -37,7 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 
 /** Deep-link request from a notification, widget or app shortcut. */
-data class LaunchRequest(val open: String, val petId: String?, val nonce: Long = 0L) {
+data class LaunchRequest(val open: String, val petId: String?, val nonce: Long = 0L, val offerId: String? = null) {
     companion object {
         const val OPEN_TODAY = "today"
         const val OPEN_CHECKIN = "checkin"
@@ -46,6 +51,13 @@ data class LaunchRequest(val open: String, val petId: String?, val nonce: Long =
         const val OPEN_SYMPTOM = "symptom"
         const val OPEN_WEEKLY = "weekly"
         const val OPEN_CARE_TEAM = "careteam"
+        /** Push offers: opens the paywall, on [offerId] when given. */
+        const val OPEN_PAYWALL = PushMessage.OPEN_PAYWALL
+        const val OPEN_SETTINGS = PushMessage.OPEN_SETTINGS
+
+        /** Where a tapped push notification should take the owner. */
+        fun from(message: PushMessage, nonce: Long): LaunchRequest =
+            LaunchRequest(open = message.open, petId = message.petId, nonce = nonce, offerId = message.offerId)
     }
 }
 
@@ -66,17 +78,30 @@ class AppViewModel(
     private val initializer: AppInitializer,
     private val sync: CareSyncRepository,
     private val households: HouseholdRepository,
+    private val pricing: PricingRepository,
+    private val push: PushRegistrationService,
+    private val pushPlatform: PushPlatform,
 ) : ViewModel() {
 
     private val ready = MutableStateFlow(false)
 
+    /** Plans, prices and offers for the paywall (cached; refreshed from the backend on launch). */
+    val pricingCatalog: StateFlow<PricingCatalog> = pricing.catalog
+
     init {
         viewModelScope.launch {
             initializer.initialize()
+            pricing.restore()
+            launch { pricing.refresh() }
             ready.value = true
             runCatching { reminders.rescheduleAll() }
             // Quietly sync shared households on launch.
             if (sync.isAvailable && households.households().any { it.cloudEnabled }) runCatching { sync.sync() }
+        }
+        // Push: keep the device registration current and ask the OS for a token.
+        if (push.isAvailable && pushPlatform.isSupported) {
+            push.startIn(viewModelScope)
+            pushPlatform.requestToken()
         }
     }
 
@@ -100,6 +125,12 @@ class AppViewModel(
     /** Fake-door: records intent and unlocks Plus locally (store billing not wired in the beta). */
     fun startTrial() = viewModelScope.launch {
         settingsRepo.update { it.copy(isPlus = true, paywallTrialTaps = it.paywallTrialTaps + 1) }
+    }
+
+    /** The welcome tour ends: remember it, and record the owner's choice about offer notifications. */
+    fun finishTour(offerNotifications: Boolean) = viewModelScope.launch {
+        settingsRepo.update { it.copy(tourDone = true, offerNotifications = offerNotifications) }
+        if (offerNotifications) pushPlatform.requestToken()
     }
 
     fun syncNow() = viewModelScope.launch { if (sync.isAvailable) runCatching { sync.sync() } }

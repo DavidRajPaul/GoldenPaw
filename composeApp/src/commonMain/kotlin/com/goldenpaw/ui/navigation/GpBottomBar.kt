@@ -1,5 +1,8 @@
 package com.goldenpaw.ui.navigation
 
+import com.goldenpaw.ui.tour.FeatureTips
+import com.goldenpaw.ui.tour.coachMark
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -122,10 +125,17 @@ fun GpBottomBar(
                     animationSpec = tween(Motion.SHORT4),
                     label = "tabTint",
                 )
+                val tip = when (item) {
+                    TopLevel.JOURNAL -> FeatureTips.JournalTab
+                    TopLevel.INSIGHTS -> FeatureTips.InsightsTab
+                    TopLevel.PETS -> FeatureTips.PetsTab
+                    else -> null
+                }
                 Column(
                     Modifier
                         .weight(1f)
                         .fillMaxHeight()
+                        .then(if (tip != null) Modifier.coachMark(tip) else Modifier)
                         .selectable(
                             selected = selected,
                             onClick = {

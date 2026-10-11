@@ -21,17 +21,28 @@ GoldenPaw helps owners of **aging and chronically ill dogs and cats** handle the
 
 ## Contents
 
+- [What's new in 1.3](#-whats-new-in-13)
 - [What's new in 1.2](#-whats-new-in-12)
 - [What's new in 1.1](#-whats-new-in-11)
 - [Features](#-features)
 - [Architecture](#-architecture)
 - [Getting started](#-getting-started)
 - [Turning on sharing and AI summaries (Supabase)](#-turning-on-sharing-and-ai-summaries-supabase)
+- [Pricing and push notifications](#-pricing-and-push-notifications)
 - [Project structure](#-project-structure)
 - [Roadmap](#-roadmap)
 - [Disclaimer](#-disclaimer)
 
 ---
+
+## 🆕 What's new in 1.3
+
+| Area | What you get |
+|---|---|
+| 💳 **Backend pricing** | Plans, prices, trial length, badges, offers and paywall copy come from the database (`gp_pricing_catalog()`), cached on the device with the old prices as fallback. Change them without a release. |
+| 🔔 **Push notifications** | Three categories with their own switches in Settings: **care team & account**, **new features & tips**, and **offers** (opt-in). FCM on Android, APNs on iOS, a `send-push` Edge Function with segments and idempotent delivery. Taps deep-link into the app, offers open the paywall on that offer. |
+| 🧭 **App tour & feature tips** | A short swipeable welcome tour after the first pet is added, then one-time spotlight tips the first time each feature appears (Quick log, check-in, meds, tabs, record scanning, care team). Replay from Settings. |
+| 🗄 **Database design** | [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md): device and server schema, sync, security and the scaling plan. RLS now checks membership once per query instead of once per row. |
 
 ## 🆕 What's new in 1.2
 
@@ -113,6 +124,24 @@ Without Supabase keys the app is **fully local**: everything works except syncin
    ```
    or set `GOLDENPAW_SUPABASE_URL` / `GOLDENPAW_SUPABASE_ANON_KEY` (also as GitHub secrets for CI builds).
 
+## 💳 Pricing and push notifications
+
+1. Apply `supabase/migrations/0002_pricing_push_scale.sql` (`supabase db push`). It seeds today's two plans.
+2. Edit `pricing_plans`, `promo_offers` and `paywall_copy` in the Supabase table editor. Examples are in [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md#43-pricing-migration-0002).
+3. Push keys:
+   * **Android (FCM)**: create a Firebase project and add the Android app `com.goldenpaw.app`, then put its values in `local.properties` (or `GOLDENPAW_FIREBASE_*` env vars):
+     ```properties
+     firebase.projectId=...
+     firebase.androidAppId=1:...:android:...
+     firebase.apiKey=AIza...
+     firebase.senderId=...
+     ```
+   * **iOS (APNs)**: set your Apple team in `iosApp/project.yml`, enable Push Notifications for the App ID, create an APNs auth key (.p8).
+   * **Server**: `supabase secrets set PUSH_ADMIN_TOKEN=... FCM_SERVICE_ACCOUNT='<json>' APNS_KEY_ID=... APNS_TEAM_ID=... APNS_TOPIC=com.goldenpaw.app APNS_PRIVATE_KEY="$(cat AuthKey.p8)"` then `supabase functions deploy send-push --no-verify-jwt`.
+4. Send: insert a row into `notification_campaigns` (category, title, body, segment, optional `offer_id`) and `POST /functions/v1/send-push {"campaign_id": "..."}` with `Authorization: Bearer $PUSH_ADMIN_TOKEN`, or schedule it with pg_cron (see the design doc).
+
+Without these keys the app runs exactly as before: bundled prices, no push.
+
 ## 🗂 Project structure
 
 ```
@@ -123,8 +152,8 @@ composeApp/              Compose Multiplatform UI
   src/iosMain            MainViewController, UNUserNotificationCenter reminders
   src/desktopMain        main.kt, tray reminders
 iosApp/                  XcodeGen project + SwiftUI host
-supabase/                SQL migration (RLS, triggers, invite RPCs) + weekly-summary Edge Function
-docs/                    TESTING.md, MARKET_RESEARCH.md
+supabase/                SQL migrations (RLS, triggers, invites, pricing, push) + weekly-summary and send-push Edge Functions
+docs/                    DATABASE_DESIGN.md, TESTING.md, MARKET_RESEARCH.md
 ```
 
 ## 🗺 Roadmap

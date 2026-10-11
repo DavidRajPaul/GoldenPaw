@@ -192,7 +192,7 @@ internal fun onMain(block: () -> Unit) {
 class IosNotificationDelegate(
     private val logDose: LogDoseUseCase,
     private val doseEvents: DoseEventRepository,
-    private val onOpen: (open: String, petId: String?) -> Unit,
+    private val onOpen: (open: String, petId: String?, offerId: String?) -> Unit,
 ) : NSObject(), UNUserNotificationCenterDelegateProtocol {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -233,7 +233,8 @@ class IosNotificationDelegate(
                 }
                 return
             }
-            else -> onOpen(info["open"] as? String ?: "today", petId)
+            // Local reminders and remote pushes share the same keys: open, petId (+ offerId for offers).
+            else -> onOpen(info["open"] as? String ?: "today", petId, info["offerId"] as? String)
         }
         withCompletionHandler()
     }
