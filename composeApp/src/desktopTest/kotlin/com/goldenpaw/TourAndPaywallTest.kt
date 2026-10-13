@@ -101,3 +101,38 @@ class PaywallAndLaunchTest {
         assertEquals(42L, r.nonce)
     }
 }
+
+class FeatureTipPolicyTest {
+    private val all = com.goldenpaw.ui.tour.FeatureTips.all.map { it.id }
+    private val policy = com.goldenpaw.ui.tour.FeatureTipPolicy
+
+    @Test
+    fun tipsShowOnlyOnTodayAfterTheTour() {
+        assertTrue(policy.allowed(tourDone = true, tourShowing = false, onHome = true, overlayOpen = false))
+        assertTrue(!policy.allowed(tourDone = true, tourShowing = false, onHome = false, overlayOpen = false)) // other tabs: never
+        assertTrue(!policy.allowed(tourDone = false, tourShowing = false, onHome = true, overlayOpen = false))
+        assertTrue(!policy.allowed(tourDone = true, tourShowing = true, onHome = true, overlayOpen = false))
+        assertTrue(!policy.allowed(tourDone = true, tourShowing = false, onHome = true, overlayOpen = true))
+    }
+
+    @Test
+    fun leavingTodayRetiresEveryRemainingTip() {
+        // Switched to another tab with tips still unseen: retire them all.
+        assertTrue(policy.shouldRetire(tourDone = true, onHome = false, seen = setOf("quick_log"), all = all))
+        // Nothing to do once everything is seen, while still on Today, before the tour, or before loading.
+        assertTrue(!policy.shouldRetire(tourDone = true, onHome = false, seen = all.toSet(), all = all))
+        assertTrue(!policy.shouldRetire(tourDone = true, onHome = true, seen = emptySet(), all = all))
+        assertTrue(!policy.shouldRetire(tourDone = false, onHome = false, seen = emptySet(), all = all))
+        assertTrue(!policy.shouldRetire(tourDone = true, onHome = false, seen = null, all = all))
+    }
+
+    @Test
+    fun tabSwitchesNeverShowATipAfterRetiring() {
+        val c = CoachMarkController().apply {
+            seen = all.toSet()
+            enabled = true
+        }
+        c.update(com.goldenpaw.ui.tour.FeatureTips.InsightsTab, androidx.compose.ui.geometry.Rect(0f, 1800f, 200f, 1900f))
+        assertNull(c.candidate(androidx.compose.ui.geometry.Size(1080f, 2000f)))
+    }
+}

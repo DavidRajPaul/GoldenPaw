@@ -139,6 +139,24 @@ class CoachMarkController {
     }
 }
 
+/**
+ * When feature tips may appear. They are a one-time, first-run walkthrough: shown on the home screen
+ * (Today) right after the welcome tour, and never again once the owner has moved on.
+ */
+object FeatureTipPolicy {
+    /** Tips can show only on Today, after the tour, with nothing else on top. */
+    fun allowed(tourDone: Boolean, tourShowing: Boolean, onHome: Boolean, overlayOpen: Boolean): Boolean =
+        tourDone && !tourShowing && onHome && !overlayOpen
+
+    /**
+     * True when the first-run walkthrough should be closed for good: the owner left Today (switched
+     * tab, opened a screen, followed a notification) after the tour while tips were still unseen.
+     * Every remaining tip is then marked seen, so switching tabs never brings tips back.
+     */
+    fun shouldRetire(tourDone: Boolean, onHome: Boolean, seen: Set<String>?, all: Collection<String>): Boolean =
+        tourDone && !onHome && seen != null && !seen.containsAll(all)
+}
+
 val LocalCoachMarks = staticCompositionLocalOf<CoachMarkController?> { null }
 
 /** Anchors a one-time tip to this element. No-op outside a [CoachMarkHost]. */

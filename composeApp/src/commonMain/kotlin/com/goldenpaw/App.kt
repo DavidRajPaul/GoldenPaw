@@ -89,6 +89,8 @@ import com.goldenpaw.data.settings.FeatureTipsStore
 import com.goldenpaw.ui.tour.AppTour
 import com.goldenpaw.ui.tour.CoachMarkController
 import com.goldenpaw.ui.tour.CoachMarkHost
+import com.goldenpaw.ui.tour.FeatureTipPolicy
+import com.goldenpaw.ui.tour.FeatureTips
 import com.goldenpaw.ui.tour.LocalCoachMarks
 import kotlinx.datetime.Clock
 
@@ -164,7 +166,20 @@ private fun AppContent(
     val seenTips: Set<String>? by tipsStore.seen.collectAsStateWithLifecycle(initialValue = null)
     val tipScope = rememberCoroutineScope()
     val showTour = state.settings.onboardingDone && !state.settings.tourDone && state.pets.isNotEmpty() && navigator.isTopLevel
-    val tipsAllowed = state.settings.tourDone && !showTour && paywallReason == null && !quickLogOpen && celebrations.isEmpty()
+    // Feature tips are a one-time walkthrough on Today right after the tour. Leaving Today retires
+    // every remaining tip, so they never reappear when switching tabs.
+    val onHome = navigator.current.route == Route.Today
+    val tipsAllowed = FeatureTipPolicy.allowed(
+        tourDone = state.settings.tourDone,
+        tourShowing = showTour,
+        onHome = onHome,
+        overlayOpen = paywallReason != null || quickLogOpen || celebrations.isNotEmpty(),
+    )
+    LaunchedEffect(onHome, state.settings.tourDone, seenTips) {
+        if (FeatureTipPolicy.shouldRetire(state.settings.tourDone, onHome, seenTips, FeatureTips.all.map { it.id })) {
+            tipsStore.markAllSeen(FeatureTips.all.map { it.id })
+        }
+    }
     SideEffect {
         coachMarks.seen = seenTips
         coachMarks.enabled = tipsAllowed

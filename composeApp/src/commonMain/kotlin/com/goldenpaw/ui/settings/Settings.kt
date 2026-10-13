@@ -112,8 +112,9 @@ class SettingsViewModel(
 
     /** Shows the welcome tour again and re-arms every one-time feature tip. */
     fun replayTour(onDone: () -> Unit) = viewModelScope.launch {
-        tips.reset()
+        // Tour first: with the tour pending, leaving-Today logic won't retire the freshly reset tips.
         settingsRepo.update { it.copy(tourDone = false) }
+        tips.reset()
         onDone()
     }
 
