@@ -1,13 +1,12 @@
 package com.goldenpaw.ui.pets
 
+import com.goldenpaw.ui.designsystem.rememberAmbientSwell
+import androidx.compose.ui.draw.drawBehind
+
 import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -392,12 +391,9 @@ fun MemorialScreen(petId: String) {
     LaunchedEffect(pet?.id) {
         if (pet != null && !reduceMotion) mono.animateTo(1f, tween(2600, easing = FastOutSlowInEasing))
     }
-    // Candle-glow breathing gradient
-    val glow = if (reduceMotion) 0.5f else {
-        val t = rememberInfiniteTransition(label = "candle")
-        val v by t.animateFloat(0.35f, 0.65f, infiniteRepeatable(tween(3200), RepeatMode.Reverse), label = "glow")
-        v
-    }
+    // Candle glow: one slow breath, then it rests. Read only in the draw phase below.
+    val glow = rememberAmbientSwell(low = 0.35f, high = 0.65f, rest = 0.5f, halfMs = 3200, easing = FastOutSlowInEasing)
+    val candle = Color(0xFFFFC56B)
 
     Scaffold(
         topBar = { GpTopBar("", onBack = actions.back) },
@@ -405,12 +401,16 @@ fun MemorialScreen(petId: String) {
     ) { padding ->
         if (pet == null) return@Scaffold
         Box(
-            Modifier.fillMaxSize().background(
-                Brush.radialGradient(
-                    listOf(Color(0xFFFFC56B).copy(alpha = glow * 0.35f), Color.Transparent),
-                    radius = 900f,
-                ),
-            ),
+            Modifier.fillMaxSize().drawBehind {
+                val g = glow?.value ?: 0.5f
+                drawRect(
+                    Brush.radialGradient(
+                        listOf(candle.copy(alpha = g * 0.35f), Color.Transparent),
+                        center = center,
+                        radius = 900f,
+                    ),
+                )
+            },
         ) {
             LazyColumn(
                 contentPadding = PaddingValues(
@@ -422,7 +422,7 @@ fun MemorialScreen(petId: String) {
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                item { PetAvatar(pet.photoPath, pet.species, size = 180.dp, monochrome = mono.value) }
+                item { PetAvatar(pet.photoPath, pet.species, size = 180.dp, monochromeProvider = { mono.value }) }
                 item { Text("In loving memory", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
                 item { Text(pet.name, style = MaterialTheme.typography.displaySmall) }
                 item {

@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.insights
 
+import com.goldenpaw.ui.designsystem.loadingSemantics
+
 import com.goldenpaw.ui.designsystem.MotionSpecs
 
 import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
@@ -176,7 +178,10 @@ private fun WeeklyTab(state: InsightsState, weekly: WeeklyUiState, padding: Padd
                 !state.isPlus -> LockedSummaryCard(state.pet?.name.orEmpty()) {
                     actions.showPaywall("Weekly summaries turn your logs into a short, kind story of the week, with things worth mentioning to your vet.")
                 }
-                weekly.generating && weekly.summary == null -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                weekly.generating && weekly.summary == null -> Column(
+                    Modifier.loadingSemantics("Writing this week's summary"),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
                     SkeletonCard(height = 28.dp)
                     SkeletonCard(height = 140.dp)
                 }

@@ -116,3 +116,37 @@ class AmbientTransitionGatingTest {
         assertEquals("test", transition.label)
     }
 }
+
+class AmbientMotionTest {
+    private fun total(legs: List<Pair<Float, Int>>) = legs.sumOf { it.second }
+
+    @Test
+    fun everyAmbientLoopEndsAtRestWithinFiveSeconds() {
+        // The app's three ambient swells: wellness ring, empty-state icon, memorial candle.
+        val cases = listOf(
+            com.goldenpaw.ui.designsystem.AmbientMotion.legs(0.985f, 1.015f, 1f, 2600),
+            com.goldenpaw.ui.designsystem.AmbientMotion.legs(-4f, 4f, 0f, 2200),
+            com.goldenpaw.ui.designsystem.AmbientMotion.legs(0.35f, 0.65f, 0.5f, 3200),
+        )
+        cases.forEach { legs ->
+            assertTrue(legs.isNotEmpty(), "plays at least one swell")
+            assertTrue(total(legs) <= com.goldenpaw.ui.designsystem.AmbientMotion.MAX_MS, "stops within 5 s: ${total(legs)}")
+        }
+        assertEquals(1f, cases[0].last().first)
+        assertEquals(0f, cases[1].last().first)
+        assertEquals(0.5f, cases[2].last().first)
+    }
+
+    @Test
+    fun emptyStateFloatSwingsBothWaysBeforeResting() {
+        val legs = com.goldenpaw.ui.designsystem.AmbientMotion.legs(-4f, 4f, 0f, 2200)
+        assertEquals(listOf(4f to 1100, -4f to 2200, 0f to 1100), legs)
+    }
+
+    @Test
+    fun degenerateInputsDoNothing() {
+        assertTrue(com.goldenpaw.ui.designsystem.AmbientMotion.legs(1f, 1f, 1f, 1000).isEmpty())
+        // A swing longer than the budget: no legs, so the value simply stays at rest.
+        assertTrue(com.goldenpaw.ui.designsystem.AmbientMotion.legs(0f, 1f, 0.5f, 20_000).isEmpty())
+    }
+}
