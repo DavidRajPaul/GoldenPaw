@@ -1,5 +1,13 @@
 package com.goldenpaw.platform
 
+import kotlinx.coroutines.flow.MutableSharedFlow
+
+import androidx.compose.runtime.rememberUpdatedState
+
+import androidx.compose.runtime.getValue
+
+import androidx.compose.runtime.LaunchedEffect
+
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -74,7 +82,19 @@ actual fun PlatformBackHandler(
     onCancel: () -> Unit,
     onBack: () -> Unit,
 ) {
-    // Desktop uses the window's Escape key handler (see main.kt) and the top-bar back buttons.
+    // Escape in the main window (see main.kt) goes back one screen, like the top-bar back button.
+    val latest by rememberUpdatedState(onBack)
+    if (enabled) {
+        LaunchedEffect(Unit) { DesktopBackEvents.events.collect { latest() } }
+    }
+}
+
+/** Back requests from the keyboard (Escape). Only delivered while a back handler is enabled. */
+object DesktopBackEvents {
+    internal val events = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** True when a screen can go back and the request was handed to it. */
+    fun requestBack(): Boolean = events.subscriptionCount.value > 0 && events.tryEmit(Unit)
 }
 
 @Composable

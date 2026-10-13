@@ -64,3 +64,11 @@ class DesktopPlatformTest {
         assertEquals("\"Bruno's \\\"Rabies\\\" dose \\\\ 2\"", n.appleScriptString("Bruno's \"Rabies\" dose \\ 2"))
     }
 }
+
+class DesktopBackEventsTest {
+    @Test
+    fun escapeIsIgnoredWhenNothingCanGoBack() {
+        // No screen is listening (e.g. on Today with nothing to go back to): Escape isn't consumed.
+        kotlin.test.assertFalse(com.goldenpaw.platform.DesktopBackEvents.requestBack())
+    }
+}

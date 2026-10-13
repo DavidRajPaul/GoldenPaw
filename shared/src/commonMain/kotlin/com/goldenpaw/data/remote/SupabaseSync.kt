@@ -238,10 +238,14 @@ class SupabaseSyncRepository(
     ) {
         val key = cursorKey(table, householdId)
         var cursor = store.get(key)
+        // First page re-reads a short overlap window: a row whose transaction committed late can carry
+        // a synced_at just before the cursor. Re-applying rows is idempotent (last write wins).
+        var lowerBound = cursor?.let { overlapCursor(it) }
+        var inclusive = lowerBound != null && lowerBound != cursor
         while (true) {
             val params = buildMap {
                 put("household_id", "eq.$householdId")
-                if (cursor != null) put("synced_at", "gt.$cursor")
+                if (lowerBound != null) put("synced_at", (if (inclusive) "gte." else "gt.") + lowerBound)
                 put("order", "synced_at.asc")
                 put("limit", PAGE_SIZE.toString())
             }
@@ -256,6 +260,8 @@ class SupabaseSyncRepository(
             }
             store.put(key, cursor)
             if (applied < page.size || page.size < PAGE_SIZE) break
+            lowerBound = cursor
+            inclusive = false
         }
     }
 
@@ -388,6 +394,17 @@ class SupabaseSyncRepository(
 
     companion object {
         private const val PAGE_SIZE = 500
+
+        /** How far back the first pull page reaches past the cursor (late-committing writes). */
+        const val OVERLAP_SECONDS = 30L
+
+        /**
+         * The cursor moved back by [OVERLAP_SECONDS], as an ISO-8601 instant PostgREST accepts. Falls
+         * back to the cursor itself if it can't be parsed.
+         */
+        fun overlapCursor(cursor: String): String = runCatching {
+            (kotlinx.datetime.Instant.parse(cursor) - kotlin.time.Duration.parse("${OVERLAP_SECONDS}s")).toString()
+        }.getOrDefault(cursor)
         private val SYNCED_TABLES = listOf(
             "pets", "medications", "dose_events", "check_ins", "weight_entries", "symptom_entries", "vet_visits",
         )

@@ -177,6 +177,19 @@ class SupabaseAuthRepository(
         clear()
     }
 
+    override suspend fun deleteAccount(): Result<Unit> = runCatching {
+        check(isAvailable) { "Cloud isn't set up in this build" }
+        val current = validSession() ?: throw CloudException("Sign in first", 401)
+        val response = http.post("${config.baseUrl}/rest/v1/rpc/gp_delete_my_account") {
+            supabaseHeaders(config, current.accessToken)
+            contentType(ContentType.Application.Json)
+            setBody("{}")
+        }
+        if (!response.status.isSuccess()) throw CloudException(response.errorMessage(), response.status.value)
+        // The server already revoked the user; just forget the session locally.
+        clear()
+    }
+
     private suspend fun saveToken(token: TokenResponse, fallbackEmail: String): CloudSession {
         val previous = _session.value
         val stored = StoredSession(

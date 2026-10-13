@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.care
 
+import com.goldenpaw.ui.designsystem.errorShake
+
 import com.goldenpaw.ui.designsystem.MotionSpecs
 import com.goldenpaw.ui.designsystem.expandTransition
 import com.goldenpaw.ui.designsystem.collapseTransition
@@ -371,8 +373,10 @@ private fun SignInForm(ui: CareTeamUi, vm: CareTeamViewModel) {
         label = { Text("Email") },
         singleLine = true,
         enabled = !ui.codeSent,
+        isError = ui.error != null && !ui.codeSent,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-        modifier = Modifier.fillMaxWidth(),
+        // A short shake when sign-in fails (no movement with reduced motion).
+        modifier = Modifier.fillMaxWidth().errorShake(ui.error.takeIf { !ui.codeSent }),
     )
     AnimatedVisibility(
         ui.codeSent,
@@ -386,7 +390,8 @@ private fun SignInForm(ui: CareTeamUi, vm: CareTeamViewModel) {
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             textStyle = MaterialTheme.typography.titleLarge.copy(fontFamily = FontFamily.Monospace),
-            modifier = Modifier.fillMaxWidth(),
+            isError = ui.error != null,
+            modifier = Modifier.fillMaxWidth().errorShake(ui.error),
         )
     }
     Button(

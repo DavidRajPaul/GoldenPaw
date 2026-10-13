@@ -14,7 +14,11 @@ targets:
     type: application
     platform: iOS
     sources:
-      - iosApp
+      - path: iosApp
+        excludes: ["PrivacyInfo.xcprivacy"]
+      # Apple privacy manifest: must be copied into the app bundle as a resource.
+      - path: iosApp/PrivacyInfo.xcprivacy
+        buildPhase: resources
     info:
       path: iosApp/Info.plist
       properties:

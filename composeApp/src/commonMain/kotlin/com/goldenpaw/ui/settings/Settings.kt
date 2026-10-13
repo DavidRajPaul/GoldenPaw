@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.settings
 
+import com.goldenpaw.ui.common.ConfirmDialog
+
 import com.goldenpaw.data.settings.FeatureTipsStore
 import com.goldenpaw.ui.tour.FeatureTips
 import com.goldenpaw.ui.tour.coachMark
@@ -89,7 +91,7 @@ class SettingsViewModel(
     private val dataManager: DataManager,
     private val reminders: ReminderGateway,
     private val careTeam: CareTeamService,
-    auth: CloudAuthRepository,
+    private val auth: CloudAuthRepository,
     private val tips: FeatureTipsStore,
 ) : ViewModel() {
 
@@ -120,6 +122,13 @@ class SettingsViewModel(
 
     fun export(onReady: (String) -> Unit) = viewModelScope.launch { onReady(dataManager.exportJson()) }
 
+    /** Deletes the cloud account (Play / App Store requirement). Local data stays on this device. */
+    fun deleteAccount(onResult: (String) -> Unit) = viewModelScope.launch {
+        auth.deleteAccount()
+            .onSuccess { onResult("Your GoldenPaw account was deleted. Data on this device is still here.") }
+            .onFailure { onResult(it.message ?: "Couldn't delete the account. Please try again.") }
+    }
+
     fun deleteEverything(onDone: () -> Unit) = viewModelScope.launch {
         dataManager.deleteEverything()
         reminders.rescheduleAll()
@@ -140,6 +149,7 @@ fun SettingsScreen() {
     var editName by remember { mutableStateOf(false) }
     var pickTime by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDeleteAccount by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
     var versionTaps by remember { mutableIntStateOf(0) }
 
@@ -344,6 +354,17 @@ fun SettingsScreen() {
                 )
             }
 
+            if (session != null) {
+                item {
+                    SettingRow(
+                        title = "Delete my account",
+                        subtitle = "Removes your sign-in and everything shared from teams you own",
+                        onClick = { confirmDeleteAccount = true },
+                        danger = true,
+                    )
+                }
+            }
+
             item { SectionHeader("About") }
             item {
                 SettingRow(
@@ -390,6 +411,17 @@ fun SettingsScreen() {
             initial = s.checkInReminderTime,
             onDismiss = { pickTime = false },
             onPicked = { t: LocalTime -> vm.update({ it.copy(checkInReminderTime = t) }, reschedule = true) },
+        )
+    }
+    if (confirmDeleteAccount) {
+        ConfirmDialog(
+            title = "Delete your account?",
+            body = "This permanently deletes your GoldenPaw sign-in, the care teams you own and everything shared in them " +
+                "(for everyone in those teams), and your place in other people's teams. Pets and logs on this device stay " +
+                "until you delete them below. This can't be undone.",
+            confirm = "Delete account",
+            onConfirm = { vm.deleteAccount { message -> scope.launch { snackbar.showSnackbar(message) } } },
+            onDismiss = { confirmDeleteAccount = false },
         )
     }
     if (confirmDelete) {
