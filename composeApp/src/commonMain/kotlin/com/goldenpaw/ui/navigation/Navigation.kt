@@ -177,6 +177,8 @@ data class AppActions(
     val selectPet: (String) -> Unit,
     val canAddPet: () -> Boolean,
     val openQuickLog: () -> Unit,
+    /** Opens an in-app destination (same vocabulary as notification deep links). */
+    val openLink: (com.goldenpaw.ui.LaunchRequest) -> Unit = {},
 )
 
 val LocalAppActions = staticCompositionLocalOf<AppActions> { error("AppActions not provided") }

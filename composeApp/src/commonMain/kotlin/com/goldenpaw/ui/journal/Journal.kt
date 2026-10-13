@@ -1,5 +1,8 @@
 package com.goldenpaw.ui.journal
 
+import com.goldenpaw.domain.ads.AdPlacement
+import com.goldenpaw.ui.ads.PromoSlot
+
 import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
 
 import androidx.compose.foundation.background
@@ -299,6 +302,8 @@ fun JournalScreen() {
                 }
                 dayItems.forEach { journalItem ->
                     val i = index++
+                    // One calm promotion slot after the 5th entry (renders nothing unless the engine allows it).
+                    if (i == 5) item(key = "promo", contentType = "promo") { PromoSlot(AdPlacement.JOURNAL_FEED) }
                     item(key = journalItem.key, contentType = journalItem::class.simpleName) {
                         val mod = motionAwareAnimateItem().staggerIn(stagger, journalItem.key, i)
                         when (val item = journalItem) {

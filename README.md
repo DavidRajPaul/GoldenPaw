@@ -142,6 +142,8 @@ Without Supabase keys the app is **fully local**: everything works except syncin
 
 Without these keys the app runs exactly as before: bundled prices, no push.
 
+**Calm promotions:** apply `supabase/migrations/0003_ads.sql`. Promotions ship **off**; turn them on in `ad_config` and add cards to `ad_house_creatives`. Strategy, research and every rule: [docs/MONETIZATION_ADS.md](docs/MONETIZATION_ADS.md).
+
 ## 🗂 Project structure
 
 ```
@@ -153,7 +155,7 @@ composeApp/              Compose Multiplatform UI
   src/desktopMain        main.kt, tray reminders
 iosApp/                  XcodeGen project + SwiftUI host
 supabase/                SQL migrations (RLS, triggers, invites, pricing, push) + weekly-summary and send-push Edge Functions
-docs/                    DATABASE_DESIGN.md, TESTING.md, MARKET_RESEARCH.md
+docs/                    MONETIZATION_ADS.md, DATABASE_DESIGN.md, TESTING.md, MARKET_RESEARCH.md
 ```
 
 ## 🗺 Roadmap
