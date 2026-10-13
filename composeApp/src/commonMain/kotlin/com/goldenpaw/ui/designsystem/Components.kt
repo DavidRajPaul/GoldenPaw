@@ -1,9 +1,20 @@
 package com.goldenpaw.ui.designsystem
 
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.geometry.Rect
+
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -13,7 +24,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -144,14 +154,8 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     action: (@Composable () -> Unit)? = null,
 ) {
-    // A gentle float on the icon makes empty screens feel alive without demanding attention.
-    val reduce = LocalReduceMotion.current
-    val float = if (reduce) null else rememberInfiniteTransition(label = "emptyFloat").animateFloat(
-        initialValue = -4f,
-        targetValue = 4f,
-        animationSpec = infiniteRepeatable(tween(2200, easing = Motion.Standard), RepeatMode.Reverse),
-        label = "emptyFloatY",
-    )
+    // A gentle float on the icon when the screen appears, then it rests (never loops forever).
+    val float = rememberAmbientSwell(low = -4f, high = 4f, rest = 0f, halfMs = 2200)
     Column(
         modifier = modifier.fillMaxWidth().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -271,6 +275,8 @@ fun PetAvatar(
     size: Dp = 48.dp,
     monochrome: Float = 0f,
     selected: Boolean = false,
+    /** Animated alternative to [monochrome], read in the draw phase only (no recomposition per frame). */
+    monochromeProvider: (() -> Float)? = null,
 ) {
     val files = LocalAppFiles.current
     val ring by animateColorAsState(
@@ -296,8 +302,10 @@ fun PetAvatar(
                 model = photoPath,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                colorFilter = if (monochrome > 0f) ColorFilter.colorMatrix(matrix) else null,
-                modifier = Modifier.fillMaxSize(),
+                colorFilter = if (monochromeProvider == null && monochrome > 0f) ColorFilter.colorMatrix(matrix) else null,
+                modifier = Modifier.fillMaxSize().then(
+                    if (monochromeProvider != null) Modifier.desaturate(monochromeProvider) else Modifier,
+                ),
             )
         } else {
             Icon(
@@ -365,12 +373,8 @@ fun WellnessRing(
         if (reduceMotion) sweep.snapTo(target)
         else sweep.animateTo(target, tween(1100, easing = Motion.EmphasizedDecelerate))
     }
-    val breathing = if (reduceMotion) null else rememberInfiniteTransition(label = "breath").animateFloat(
-        initialValue = 0.985f,
-        targetValue = 1.015f,
-        animationSpec = infiniteRepeatable(tween(2600, easing = Motion.Standard), RepeatMode.Reverse),
-        label = "breathScale",
-    )
+    // One gentle breath when the ring appears, then it rests (never loops forever).
+    val breathing = rememberAmbientSwell(low = 0.985f, high = 1.015f, rest = 1f, halfMs = 2600)
     val color = when {
         fraction == null -> wellness.empty
         target >= 0.7f -> wellness.good
@@ -437,7 +441,8 @@ fun EmojiScale(
             Text(question, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        // A radio group: screen readers announce which face is selected.
+        Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.SpaceBetween) {
             GpIcons.faces.forEachIndexed { index, face ->
                 val score = index + 1
                 val isSelected = value == score
@@ -465,7 +470,7 @@ fun EmojiScale(
                             color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                             shape = CircleShape,
                         )
-                        .clickable { onValue(score) }
+                        .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onValue(score) })
                         .semantics { contentDescription = "$label $score of 5" },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -491,7 +496,11 @@ fun EmojiScale(
 @Composable
 fun SeverityPicker(value: Int, onValue: (Int) -> Unit, modifier: Modifier = Modifier) {
     val wellness = LocalWellnessColors.current
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier.selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         (1..5).forEach { level ->
             val active = level <= value
             val color = when {
@@ -503,10 +512,10 @@ fun SeverityPicker(value: Int, onValue: (Int) -> Unit, modifier: Modifier = Modi
             val animated by animateColorAsState(color, label = "sev")
             Box(
                 Modifier
-                    .size(44.dp)
+                    .size(48.dp) // minimum touch target
                     .clip(RoundedCornerShape(14.dp))
                     .background(animated)
-                    .clickable { onValue(level) }
+                    .selectable(selected = level == value, role = Role.RadioButton, onClick = { onValue(level) })
                     .semantics { contentDescription = "Severity $level of 5" },
                 contentAlignment = Alignment.Center,
             ) {
@@ -550,6 +559,13 @@ fun SkeletonCard(modifier: Modifier = Modifier, height: Dp = 96.dp) {
     Box(modifier.fillMaxWidth().height(height).clip(MaterialTheme.shapes.large).shimmer())
 }
 
+/** Put on the container of skeleton placeholders: screen readers hear "Loading" once. */
+fun Modifier.loadingSemantics(label: String = "Loading"): Modifier =
+    clearAndSetSemantics {
+        contentDescription = label
+        liveRegion = LiveRegionMode.Polite
+    }
+
 /** Quiet particle shimmer for milestones: no confetti, no sound, ~40 particles. */
 @Composable
 fun MilestoneShimmer(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary) {
@@ -573,6 +589,24 @@ fun MilestoneShimmer(modifier: Modifier = Modifier, color: Color = MaterialTheme
             val y = size.height * (1f - phase)
             val alpha = sin((phase * PI).toFloat()).coerceIn(0f, 1f) * 0.6f
             drawCircle(color.copy(alpha = alpha), radius = 1.5f + speed * 2f, center = Offset(x, y))
+        }
+    }
+}
+
+/**
+ * Draws the content through a saturation colour matrix whose amount (0 = colour, 1 = grey) is read
+ * in the draw phase, so animating it only redraws.
+ */
+fun Modifier.desaturate(amount: () -> Float): Modifier = drawWithContent {
+    val a = amount().coerceIn(0f, 1f)
+    if (a <= 0f) {
+        drawContent()
+    } else {
+        val paint = Paint().apply { colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(1f - a) }) }
+        drawIntoCanvas { canvas ->
+            canvas.saveLayer(Rect(Offset.Zero, size), paint)
+            drawContent()
+            canvas.restore()
         }
     }
 }

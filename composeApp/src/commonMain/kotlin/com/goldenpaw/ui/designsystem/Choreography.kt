@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -157,7 +158,8 @@ fun ChoreographedSplash(onFinished: () -> Unit, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.height(8.dp))
             val letters = "GoldenPaw"
-            Row {
+            // Drawn letter by letter, but read by screen readers as one word (the parent's label).
+            Row(Modifier.clearAndSetSemantics { }) {
                 letters.forEachIndexed { i, ch ->
                     Text(
                         ch.toString(),

@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.today
 
+import com.goldenpaw.ui.designsystem.loadingSemantics
+
 import com.goldenpaw.ui.designsystem.MotionSpecs
 import com.goldenpaw.ui.designsystem.expandTransition
 import com.goldenpaw.ui.designsystem.collapseTransition
@@ -212,7 +214,10 @@ fun TodayScreen() {
         },
     ) { padding ->
         if (state.loading) {
-            Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(
+                Modifier.fillMaxSize().statusBarsPadding().padding(20.dp).loadingSemantics(),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
                 SkeletonCard(height = 56.dp)
                 SkeletonCard(height = 168.dp)
                 SkeletonCard()

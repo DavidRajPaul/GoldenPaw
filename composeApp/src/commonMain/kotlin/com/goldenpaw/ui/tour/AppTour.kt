@@ -272,8 +272,9 @@ internal fun OrbitIllustration(icon: ImageVector, satellites: List<ImageVector>,
         animationSpec = infiniteRepeatable(tween(2_400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "breath",
     )
-    val a = angle?.value ?: 30f
-    val b = breath?.value ?: 0.5f
+    // Read only inside draw / graphics-layer lambdas, so the orbit never recomposes.
+    val a = { angle?.value ?: 30f }
+    val b = { breath?.value ?: 0.5f }
     val ring = MaterialTheme.colorScheme.primary
     val disc = MaterialTheme.colorScheme.primaryContainer
     val onDisc = MaterialTheme.colorScheme.onPrimaryContainer
@@ -281,7 +282,8 @@ internal fun OrbitIllustration(icon: ImageVector, satellites: List<ImageVector>,
     Box(modifier.size(220.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val r = size.minDimension / 2
-            drawCircle(ring.copy(alpha = 0.10f + 0.06f * b), radius = r * (0.86f + 0.05f * b), style = Stroke(width = 2.dp.toPx()))
+            val swell = b()
+            drawCircle(ring.copy(alpha = 0.10f + 0.06f * swell), radius = r * (0.86f + 0.05f * swell), style = Stroke(width = 2.dp.toPx()))
             drawCircle(ring.copy(alpha = 0.18f), radius = r * 0.66f, style = Stroke(width = 1.5.dp.toPx()))
         }
         Surface(shape = CircleShape, color = disc, shadowElevation = 6.dp, modifier = Modifier.size(104.dp)) {
@@ -290,7 +292,6 @@ internal fun OrbitIllustration(icon: ImageVector, satellites: List<ImageVector>,
             }
         }
         satellites.forEachIndexed { i, satellite ->
-            val theta = (a + i * (360f / satellites.size.coerceAtLeast(1))) * (kotlin.math.PI.toFloat() / 180f)
             val radius = 92.dp
             Surface(
                 shape = CircleShape,
@@ -298,6 +299,7 @@ internal fun OrbitIllustration(icon: ImageVector, satellites: List<ImageVector>,
                 shadowElevation = 3.dp,
                 modifier = Modifier
                     .graphicsLayer {
+                        val theta = (a() + i * (360f / satellites.size.coerceAtLeast(1))) * (kotlin.math.PI.toFloat() / 180f)
                         translationX = radius.toPx() * kotlin.math.cos(theta)
                         translationY = radius.toPx() * kotlin.math.sin(theta)
                     }
