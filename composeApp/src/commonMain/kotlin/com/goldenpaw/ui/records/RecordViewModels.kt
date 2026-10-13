@@ -209,18 +209,19 @@ class RecordEditorViewModel(
             }
             if (path != target.original) tempFiles += path
             val previous = page.current
+            // Drop the superseded render (never an original) before publishing the new state, so
+            // anyone observing the state never sees a page whose old render still lingers.
+            if (previous != page.original && previous != path && previous in tempFiles) {
+                files.delete(previous)
+                tempFiles -= previous
+            }
+            textRead = false
             _state.update { s ->
                 s.copy(
                     processing = false,
                     pages = s.pages.map { if (it.key == page.key) target.copy(current = path) else it },
                 )
             }
-            // Drop the superseded render (never an original).
-            if (previous != page.original && previous != path && previous in tempFiles) {
-                files.delete(previous)
-                tempFiles -= previous
-            }
-            textRead = false
         }
     }
 

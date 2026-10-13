@@ -1,16 +1,14 @@
 package com.goldenpaw.ui.care
 
-import com.goldenpaw.ui.designsystem.reducedOr
-import com.goldenpaw.ui.designsystem.ReducedMotion
+import com.goldenpaw.ui.designsystem.MotionSpecs
+import com.goldenpaw.ui.designsystem.expandTransition
+import com.goldenpaw.ui.designsystem.collapseTransition
+
 
 import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -284,7 +282,7 @@ private fun SharingCard(state: CareTeamState, ui: CareTeamUi, vm: CareTeamViewMo
         }
         AnimatedContent(
             targetState = stage,
-            transitionSpec = { fadeIn(tween(if (reduceMotion) 0 else 220)) togetherWith fadeOut(tween(if (reduceMotion) 0 else 120)) },
+            transitionSpec = { MotionSpecs.fadeThrough(reduceMotion, MotionSpecs.FadePreset.Stage) },
             label = "sharingStage",
         ) { s ->
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -376,7 +374,11 @@ private fun SignInForm(ui: CareTeamUi, vm: CareTeamViewModel) {
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         modifier = Modifier.fillMaxWidth(),
     )
-    AnimatedVisibility(ui.codeSent, enter = reducedOr(ReducedMotion.defaultEnter), exit = reducedOr(ReducedMotion.defaultExit)) {
+    AnimatedVisibility(
+        ui.codeSent,
+        enter = expandTransition(MotionSpecs.ExpandPreset.Field),
+        exit = collapseTransition(MotionSpecs.ExpandPreset.Field),
+    ) {
         OutlinedTextField(
             value = ui.otp,
             onValueChange = vm::setOtp,

@@ -1,7 +1,6 @@
 package com.goldenpaw.ui.designsystem
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.CubicBezierEasing
@@ -15,11 +14,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.MaterialTheme
@@ -185,17 +179,7 @@ fun AnimatedCounter(
     val reduce = LocalReduceMotion.current
     AnimatedContent(
         targetState = value,
-        transitionSpec = {
-            if (reduce) {
-                fadeIn(tween(120)) togetherWith fadeOut(tween(120))
-            } else if (targetState > initialState) {
-                (slideInVertically(Motion.spatialDefault()) { it } + fadeIn(tween(Motion.SHORT4))) togetherWith
-                    (slideOutVertically(Motion.spatialDefault()) { -it } + fadeOut(tween(Motion.SHORT2)))
-            } else {
-                (slideInVertically(Motion.spatialDefault()) { -it } + fadeIn(tween(Motion.SHORT4))) togetherWith
-                    (slideOutVertically(Motion.spatialDefault()) { it } + fadeOut(tween(Motion.SHORT2)))
-            }.using(SizeTransform(clip = false))
-        },
+        transitionSpec = { MotionSpecs.roll(reduce, MotionSpecs.RollPreset.Counter, up = targetState > initialState) },
         label = "counter",
         modifier = modifier,
     ) { v ->

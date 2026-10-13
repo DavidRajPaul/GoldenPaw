@@ -1,7 +1,9 @@
 package com.goldenpaw.ui.today
 
-import com.goldenpaw.ui.designsystem.reducedOr
-import com.goldenpaw.ui.designsystem.ReducedMotion
+import com.goldenpaw.ui.designsystem.MotionSpecs
+import com.goldenpaw.ui.designsystem.expandTransition
+import com.goldenpaw.ui.designsystem.collapseTransition
+
 
 import com.goldenpaw.ui.designsystem.motionAwareAnimateItem
 
@@ -13,13 +15,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -661,7 +656,7 @@ private fun HeroCard(
                 val reduce = LocalReduceMotion.current
                 AnimatedContent(
                     targetState = checkedInToday,
-                    transitionSpec = { ReducedMotion.content(reduce, ReducedMotion.defaultContent()) },
+                    transitionSpec = { MotionSpecs.contentDefault(reduce) },
                     label = "checkedIn",
                 ) { done ->
                     if (!done) {
@@ -794,8 +789,8 @@ private fun DoseCard(
                 val event = slot.event
                 AnimatedVisibility(
                     visible = done && event != null,
-                    enter = reducedOr(fadeIn() + expandVertically()),
-                    exit = reducedOr(fadeOut() + shrinkVertically()),
+                    enter = expandTransition(MotionSpecs.ExpandPreset.Inline),
+                    exit = collapseTransition(MotionSpecs.ExpandPreset.Inline),
                 ) {
                     if (event != null) {
                         val member = team?.member(event.givenById)
@@ -812,11 +807,7 @@ private fun DoseCard(
             // Pill → check morph: the round "Given" button becomes a checkmark with a springy pop.
             AnimatedContent(
                 targetState = slot.state == SlotState.GIVEN,
-                transitionSpec = {
-                    if (reduceMotion) fadeIn(tween(120)) togetherWith fadeOut(tween(120))
-                    else (scaleIn(Motion.bouncy(), initialScale = 0.3f) + fadeIn(tween(Motion.SHORT4))) togetherWith
-                        (scaleOut(tween(Motion.SHORT4), targetScale = 0.4f) + fadeOut(tween(Motion.SHORT2)))
-                },
+                transitionSpec = { MotionSpecs.successPop(reduceMotion, MotionSpecs.SuccessPreset.Check) },
                 label = "giveMorph",
             ) { given ->
                 if (given) {
@@ -919,8 +910,8 @@ private fun UpcomingSection(upcoming: List<Pair<LocalDate, List<DoseSlot>>>, tod
         }
         AnimatedVisibility(
             visible = expanded,
-            enter = reducedOr(expandVertically(Motion.spatialDefault()) + fadeIn()),
-            exit = reducedOr(shrinkVertically(Motion.spatialFast()) + fadeOut()),
+            enter = expandTransition(MotionSpecs.ExpandPreset.Section),
+            exit = collapseTransition(MotionSpecs.ExpandPreset.Section),
         ) {
             Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 upcoming.forEach { (date, slots) ->

@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.onboarding
 
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
 import com.goldenpaw.ui.designsystem.rememberAmbientTransition
 
 import androidx.compose.animation.AnimatedContent
@@ -10,11 +12,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -289,14 +286,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
             val reduce = LocalReduceMotion.current
             AnimatedContent(
                 targetState = label,
-                transitionSpec = {
-                    if (reduce) {
-                        fadeIn(tween(120)) togetherWith fadeOut(tween(120))
-                    } else {
-                        (slideInVertically(Motion.spatialDefault()) { it / 2 } + fadeIn(tween(Motion.SHORT4))) togetherWith
-                            (slideOutVertically(Motion.spatialFast()) { -it / 2 } + fadeOut(tween(Motion.SHORT2)))
-                    }
-                },
+                transitionSpec = { MotionSpecs.roll(reduce, MotionSpecs.RollPreset.Label, up = true) },
                 label = "cta",
             ) { Text(it) }
         }

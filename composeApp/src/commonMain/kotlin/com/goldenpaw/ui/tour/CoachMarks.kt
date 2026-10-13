@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.tour
 
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
 import com.goldenpaw.ui.designsystem.rememberAmbientTransition
 
 import androidx.compose.animation.AnimatedVisibility
@@ -9,9 +11,6 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -140,6 +139,24 @@ class CoachMarkController {
     }
 }
 
+/**
+ * When feature tips may appear. They are a one-time, first-run walkthrough: shown on the home screen
+ * (Today) right after the welcome tour, and never again once the owner has moved on.
+ */
+object FeatureTipPolicy {
+    /** Tips can show only on Today, after the tour, with nothing else on top. */
+    fun allowed(tourDone: Boolean, tourShowing: Boolean, onHome: Boolean, overlayOpen: Boolean): Boolean =
+        tourDone && !tourShowing && onHome && !overlayOpen
+
+    /**
+     * True when the first-run walkthrough should be closed for good: the owner left Today (switched
+     * tab, opened a screen, followed a notification) after the tour while tips were still unseen.
+     * Every remaining tip is then marked seen, so switching tabs never brings tips back.
+     */
+    fun shouldRetire(tourDone: Boolean, onHome: Boolean, seen: Set<String>?, all: Collection<String>): Boolean =
+        tourDone && !onHome && seen != null && !seen.containsAll(all)
+}
+
 val LocalCoachMarks = staticCompositionLocalOf<CoachMarkController?> { null }
 
 /** Anchors a one-time tip to this element. No-op outside a [CoachMarkHost]. */
@@ -160,6 +177,7 @@ fun Modifier.coachMark(tip: FeatureTip): Modifier = composed {
  */
 @Composable
 fun CoachMarkHost(controller: CoachMarkController, onSeen: (String) -> Unit) {
+    val reduce = LocalReduceMotion.current
     var windowSize by remember { mutableStateOf(Size.Zero) }
     val candidate = controller.candidate(windowSize)
     var shown by remember { mutableStateOf<FeatureTip?>(null) }
@@ -183,7 +201,7 @@ fun CoachMarkHost(controller: CoachMarkController, onSeen: (String) -> Unit) {
         if (tip != null && bounds != null) {
             key(tip.id) {
                 val appear = remember { MutableTransitionState(false).apply { targetState = true } }
-                AnimatedVisibility(visibleState = appear, enter = fadeIn(tween(220)), exit = fadeOut(tween(160))) {
+                AnimatedVisibility(visibleState = appear, enter = MotionSpecs.scrimEnter(reduce), exit = MotionSpecs.scrimExit(reduce)) {
                     Spotlight(
                         tip = tip,
                         anchor = bounds,
@@ -246,7 +264,7 @@ private fun Spotlight(tip: FeatureTip, anchor: Rect, onDismiss: () -> Unit) {
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             ) {
                 val pop = remember { MutableTransitionState(false).apply { targetState = true } }
-                AnimatedVisibility(visibleState = pop, enter = if (reduceMotion) fadeIn() else scaleIn(initialScale = 0.9f) + fadeIn()) {
+                AnimatedVisibility(visibleState = pop, enter = MotionSpecs.popoverEnter(reduceMotion)) {
                     Column(Modifier.padding(start = 20.dp, end = 12.dp, top = 18.dp, bottom = 8.dp)) {
                         Text(tip.title, style = MaterialTheme.typography.titleMedium)
                         Text(

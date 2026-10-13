@@ -1,5 +1,7 @@
 package com.goldenpaw.ui.navigation
 
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
 import com.goldenpaw.ui.tour.FeatureTips
 import com.goldenpaw.ui.tour.coachMark
 
@@ -8,11 +10,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -151,14 +148,7 @@ fun GpBottomBar(
                 ) {
                     AnimatedContent(
                         targetState = selected,
-                        transitionSpec = {
-                            if (reduceMotion) {
-                                fadeIn(tween(100)) togetherWith fadeOut(tween(100))
-                            } else {
-                                (scaleIn(spring(dampingRatio = 0.45f, stiffness = 700f), initialScale = 0.6f) + fadeIn(tween(120))) togetherWith
-                                    (scaleOut(tween(100), targetScale = 0.8f) + fadeOut(tween(100)))
-                            }
-                        },
+                        transitionSpec = { MotionSpecs.tabIconPop(reduceMotion) },
                         label = "tabIcon",
                     ) { isSelected ->
                         Icon(

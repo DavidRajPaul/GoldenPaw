@@ -52,16 +52,6 @@ class ReducedMotionSpecTest {
     }
 
     @Test
-    fun scopedDefaultsAreReplacedByAFadeWhenReduced() {
-        // expand/shrink specs hold size lambdas, so they can't be compared by value; what matters is
-        // that the reduced path never keeps them.
-        assertEquals(fade, ReducedMotion.enter(true, ReducedMotion.columnEnter))
-        assertEquals(fade, ReducedMotion.enter(true, ReducedMotion.defaultEnter))
-        assertEquals(fadeOutReduced, ReducedMotion.exit(true, ReducedMotion.columnExit))
-        assertEquals(fadeOutReduced, ReducedMotion.exit(true, ReducedMotion.defaultExit))
-    }
-
-    @Test
     fun contentSwapCrossfadesAndSnapsSizeWhenReduced() {
         val normal = (fadeIn(tween(200)) + scaleIn(initialScale = 0.8f)) togetherWith fadeOut(tween(120))
         assertSame(normal, ReducedMotion.content(reduced = false, normal = normal))
@@ -71,16 +61,6 @@ class ReducedMotionSpecTest {
         assertEquals(fadeOutReduced, reduced.initialContentExit)
         assertNotNull(reduced.sizeTransform)
         assertTrue(reduced.sizeTransform!!.clip)
-    }
-
-    @Test
-    fun defaultContentIsComposesDefault() {
-        val d = ReducedMotion.defaultContent()
-        assertEquals(
-            fadeIn(tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)),
-            d.targetContentEnter,
-        )
-        assertEquals(fadeOut(tween(90)), d.initialContentExit)
     }
 
     @Test

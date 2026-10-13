@@ -8,14 +8,8 @@ import androidx.compose.animation.core.InfiniteTransition
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandIn
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.shrinkOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.grid.LazyGridItemScope
 import androidx.compose.runtime.Composable
@@ -29,6 +23,7 @@ import androidx.compose.ui.Modifier
  * motion off, every function returns exactly the spec the call site used before.
  *
  * The functions take `reduced` explicitly so they can be unit-tested without composition.
+ * Ready-made transitions for screens live in [MotionSpecs]; this file is the policy they share.
  */
 object ReducedMotion {
     /** The fade used in place of movement (the value the app already used in most places). */
@@ -45,19 +40,6 @@ object ReducedMotion {
         if (reduced) ContentTransform(fadeEnter(), fadeExit(), sizeTransform = snapSize()) else normal
 
     fun snapSize(): SizeTransform = SizeTransform(clip = true) { _, _ -> snap() }
-
-    /** `AnimatedVisibility`'s defaults outside a Row/Column (what the un-scoped overload uses). */
-    val defaultEnter: EnterTransition get() = fadeIn() + expandIn()
-    val defaultExit: ExitTransition get() = shrinkOut() + fadeOut()
-
-    /** `ColumnScope.AnimatedVisibility`'s defaults. */
-    val columnEnter: EnterTransition get() = fadeIn() + expandVertically()
-    val columnExit: ExitTransition get() = fadeOut() + shrinkVertically()
-
-    /** `AnimatedContent`'s default transition, spelled out so call sites can keep it. */
-    fun defaultContent(): ContentTransform =
-        (fadeIn(tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))) togetherWith
-            fadeOut(tween(90))
 
     /** Whether decorative infinite animations may be created at all. */
     fun allowsAmbient(reduced: Boolean): Boolean = !reduced
