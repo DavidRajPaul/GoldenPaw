@@ -147,7 +147,8 @@ class AdEngineTest {
         val networky = catalog(ON.copy(networkPercent = 100))
         assertIs<AdDecision.ShowHouse>(decide(ctx = context(isPlus = true, network = true), cat = catalog(ON.copy(networkPercent = 100), news)))
         assertEquals(SkipReason.NO_CREATIVE, decide(ctx = context(isPlus = true, network = true), cat = networky).reason())
-        assertEquals(SkipReason.PLUS, decide(AdPlacement.WEEKLY_SUMMARY_REWARD, ctx = context(isPlus = true, network = true)).reason())
+        val rewardOn = catalog(ON.copy(placements = ON.placements + AdPlacement.WEEKLY_SUMMARY_REWARD.wire))
+        assertEquals(SkipReason.PLUS, decide(AdPlacement.WEEKLY_SUMMARY_REWARD, ctx = context(isPlus = true, network = true), cat = rewardOn).reason())
     }
 
     @Test
