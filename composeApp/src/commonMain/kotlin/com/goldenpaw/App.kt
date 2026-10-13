@@ -73,6 +73,7 @@ import com.goldenpaw.ui.pets.VetVisitEditorScreen
 import com.goldenpaw.ui.quicklog.QuickLogSheet
 import com.goldenpaw.ui.settings.RemindersHealthScreen
 import com.goldenpaw.ui.settings.SettingsScreen
+import com.goldenpaw.ui.support.HelpScreen
 import com.goldenpaw.ui.today.TodayScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
@@ -255,6 +256,7 @@ private fun AppContent(
                     Route.Reminders -> RemindersHealthScreen()
                     Route.CareTeam -> CareTeamScreen()
                     Route.Achievements -> AchievementsScreen()
+                    Route.Help -> HelpScreen()
                     is Route.PetDetail -> PetDetailScreen(petId = route.petId)
                     is Route.Memorial -> MemorialScreen(petId = route.petId)
                     is Route.PetEdit -> PetEditorScreen(

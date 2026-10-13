@@ -33,6 +33,9 @@ interface PlatformServices {
     fun openFile(path: String, mimeType: String)
     fun dial(phone: String)
 
+    /** Opens a web page, store page or mailto: link in the system handler. */
+    fun openUrl(url: String)
+
     /** Last known status; cheap enough to call during composition. */
     fun reminderHealth(): ReminderHealth
 

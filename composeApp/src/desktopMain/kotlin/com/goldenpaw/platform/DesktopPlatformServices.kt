@@ -36,6 +36,13 @@ class DesktopPlatformServices(private val notifier: DesktopNotifier) : PlatformS
         runCatching { desktop?.browse(URI("tel:${phone.filter { it.isDigit() || it == '+' }}")) }
     }
 
+    override fun openUrl(url: String) {
+        runCatching {
+            val uri = URI(url)
+            if (url.startsWith("mailto:")) desktop?.mail(uri) else desktop?.browse(uri)
+        }
+    }
+
     override fun reminderHealth() = ReminderHealth(
         notifications = notifier.available,
         exactAlarms = true,
