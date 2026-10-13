@@ -290,7 +290,7 @@ Known weaknesses and the fixes planned:
 
 | Risk | Why | Fix |
 |---|---|---|
-| A row committed late is skipped by a puller | `synced_at` is stamped at write time, but a slower transaction can commit after a reader moved its cursor past that time | Pull from `cursor − 30 s` (upserts are idempotent), or switch the cursor to a per-household `bigint` change counter assigned at commit by a statement-level trigger |
+| A row committed late is skipped by a puller | `synced_at` is stamped at write time, but a slower transaction can commit after a reader moved its cursor past that time | **Done (v1.3):** the first page of each pull starts at `cursor − 30 s` (`SupabaseSyncRepository.overlapCursor`); re-applied rows are idempotent. Long term: a per-household `bigint` change counter assigned at commit |
 | Device clocks drive LWW | A phone with a wrong clock can win or lose unfairly | Clamp `updated_at` to `now() + 5 min` in `gp_touch`; long term, hybrid logical clocks |
 | Full re-pull after reinstall | Cursor starts empty | Fine at today's sizes (2k rows/pet/year); add a snapshot endpoint if households pass ~100k rows |
 
@@ -310,7 +310,7 @@ Known weaknesses and the fixes planned:
   email), and anonymised weekly digests for AI summaries. Scanned records stay on the device today.
 * **Account deletion** (Play policy, DPDP Act, GDPR): `delete from auth.users` cascades to
   `subscriptions`; owned households need an explicit transfer-or-delete step; `devices.user_id` is
-  set null. Add a `gp_delete_my_account()` RPC before launch.
+  set null. **Done:** `gp_delete_my_account()` (migration 0004) and "Delete my account" in Settings.
 
 ---
 
@@ -374,8 +374,8 @@ storage RLS policy using the same `gp_my_household_ids()`. OCR text stays in the
 ## 9. Known gaps (in priority order)
 
 1. Commit `shared/schemas/3.json` and add Room migration tests.
-2. Sync cursor overlap window (section 5).
-3. `gp_delete_my_account()` RPC and in-app account deletion.
+2. ~~Sync cursor overlap window~~ (done).
+3. ~~`gp_delete_my_account()` RPC and in-app account deletion~~ (done).
 4. Billing: map plans and offers to store products, write `subscriptions` from webhooks, read
    entitlements in the app.
 5. `health_documents` sync and Storage (7.4).

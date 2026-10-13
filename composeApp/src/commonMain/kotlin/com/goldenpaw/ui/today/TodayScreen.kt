@@ -213,266 +213,282 @@ fun TodayScreen() {
             }
         },
     ) { padding ->
-        if (state.loading) {
-            Column(
-                Modifier.fillMaxSize().statusBarsPadding().padding(20.dp).loadingSemantics(),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                SkeletonCard(height = 56.dp)
-                SkeletonCard(height = 168.dp)
-                SkeletonCard()
-                SkeletonCard()
-            }
-            return@Scaffold
+        // Loading → empty or content crossfades instead of cutting (fade only, reduced-motion aware).
+        val reducePhase = LocalReduceMotion.current
+        val phase = when {
+            state.loading -> TodayPhase.LOADING
+            pet == null -> TodayPhase.EMPTY
+            else -> TodayPhase.CONTENT
         }
-        if (pet == null) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                EmptyState(
-                    icon = GpIcons.Pet,
-                    title = "Let's add your companion",
-                    body = "Add your dog or cat to start tracking medications, good days and everything in between.",
+        AnimatedContent(
+            targetState = phase,
+            transitionSpec = { MotionSpecs.fadeThrough(reducePhase, MotionSpecs.FadePreset.Stage) },
+            label = "todayPhase",
+        ) { shownPhase ->
+            when (shownPhase) {
+                TodayPhase.LOADING -> {
+                    Column(
+                        Modifier.fillMaxSize().statusBarsPadding().padding(20.dp).loadingSemantics(),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        SkeletonCard(height = 56.dp)
+                        SkeletonCard(height = 168.dp)
+                        SkeletonCard()
+                        SkeletonCard()
+                    }
+                }
+                TodayPhase.EMPTY -> {
+                    Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                        EmptyState(
+                            icon = GpIcons.Pet,
+                            title = "Let's add your companion",
+                            body = "Add your dog or cat to start tracking medications, good days and everything in between.",
+                        ) {
+                            Button(onClick = { actions.navigate(Route.PetEdit()) }) { Text("Add a pet") }
+                        }
+                    }
+                }
+                TodayPhase.CONTENT -> {
+                    val pet = pet ?: return@AnimatedContent
+                    val today = state.today ?: return@AnimatedContent
+
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 20.dp, end = 20.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        bottom = padding.calculateBottomPadding() + 96.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    Button(onClick = { actions.navigate(Route.PetEdit()) }) { Text("Add a pet") }
-                }
-            }
-            return@Scaffold
-        }
-        val today = state.today ?: return@Scaffold
-
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 20.dp, end = 20.dp,
-                top = padding.calculateTopPadding() + 8.dp,
-                bottom = padding.calculateBottomPadding() + 96.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            if (state.pets.size > 1) {
-                item(key = "pets", contentType = "pets") {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(state.pets, key = { it.id }) { p ->
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.clip(MaterialTheme.shapes.medium).clickable { vm.selectPet(p.id) }.padding(4.dp),
+                    if (state.pets.size > 1) {
+                        item(key = "pets", contentType = "pets") {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(state.pets, key = { it.id }) { p ->
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.clip(MaterialTheme.shapes.medium).clickable { vm.selectPet(p.id) }.padding(4.dp),
+                                    ) {
+                                        PetAvatar(p.photoPath, p.species, size = 56.dp, selected = p.id == pet.id)
+                                        Text(p.name, style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    item(key = "hero", contentType = "hero") {
+                        HeroCard(
+                            petName = pet.name,
+                            qol = state.qol,
+                            qolIsToday = state.qolDate == today,
+                            checkedInToday = state.todayCheckIn != null,
+                            given = state.givenToday,
+                            total = state.todaySlots.size,
+                            onCheckIn = { actions.navigate(Route.CheckIn(pet.id)) },
+                            modifier = Modifier.staggerIn(stagger, "hero", 0).coachMark(FeatureTips.CheckIn),
+                        )
+                    }
+                    if (gamification != null) {
+                        item(key = "care", contentType = "care") {
+                            CareProgressCard(
+                                state = gamification,
+                                onClick = { actions.navigate(Route.Achievements) },
+                                modifier = Modifier.staggerIn(stagger, "care", 1),
+                            )
+                        }
+                    }
+                    state.doubleDoses.forEach { slot ->
+                        item(key = "double-${slot.key}", contentType = "warning") {
+                            DoubleDoseCard(slot, state.team, motionAwareAnimateItem())
+                        }
+                    }
+                    state.milestone?.let { m ->
+                        item(key = "milestone", contentType = "milestone") { MilestoneCard(m, onDismiss = vm::dismissMilestone) }
+                    }
+                    if (state.insights.isNotEmpty()) {
+                        items(state.insights, key = { "insight-" + it.title }, contentType = { "insight" }) {
+                            InsightCard(it, motionAwareAnimateItem())
+                        }
+                    }
+                    state.upcomingVisit?.let { visit ->
+                        item(key = "visit", contentType = "visit") {
+                            GpCard(
+                                onClick = { actions.navigate(Route.VetVisitEdit(pet.id, visit.id)) },
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = motionAwareAnimateItem(),
                             ) {
-                                PetAvatar(p.photoPath, p.species, size = 56.dp, selected = p.id == pet.id)
-                                Text(p.name, style = MaterialTheme.typography.labelMedium)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Outlined.LocalHospital, contentDescription = null)
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(visit.title.ifBlank { "Vet visit" }, style = MaterialTheme.typography.titleMedium)
+                                        Text(
+                                            "${Formats.relativeDay(Formats.date(visit.at), today)} at ${Formats.time(visit.at)}" +
+                                                if (visit.clinic.isNotBlank()) " · ${visit.clinic}" else "",
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
-                }
-            }
-            item(key = "hero", contentType = "hero") {
-                HeroCard(
-                    petName = pet.name,
-                    qol = state.qol,
-                    qolIsToday = state.qolDate == today,
-                    checkedInToday = state.todayCheckIn != null,
-                    given = state.givenToday,
-                    total = state.todaySlots.size,
-                    onCheckIn = { actions.navigate(Route.CheckIn(pet.id)) },
-                    modifier = Modifier.staggerIn(stagger, "hero", 0).coachMark(FeatureTips.CheckIn),
-                )
-            }
-            if (gamification != null) {
-                item(key = "care", contentType = "care") {
-                    CareProgressCard(
-                        state = gamification,
-                        onClick = { actions.navigate(Route.Achievements) },
-                        modifier = Modifier.staggerIn(stagger, "care", 1),
-                    )
-                }
-            }
-            state.doubleDoses.forEach { slot ->
-                item(key = "double-${slot.key}", contentType = "warning") {
-                    DoubleDoseCard(slot, state.team, motionAwareAnimateItem())
-                }
-            }
-            state.milestone?.let { m ->
-                item(key = "milestone", contentType = "milestone") { MilestoneCard(m, onDismiss = vm::dismissMilestone) }
-            }
-            if (state.insights.isNotEmpty()) {
-                items(state.insights, key = { "insight-" + it.title }, contentType = { "insight" }) {
-                    InsightCard(it, motionAwareAnimateItem())
-                }
-            }
-            state.upcomingVisit?.let { visit ->
-                item(key = "visit", contentType = "visit") {
-                    GpCard(
-                        onClick = { actions.navigate(Route.VetVisitEdit(pet.id, visit.id)) },
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        modifier = motionAwareAnimateItem(),
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.LocalHospital, contentDescription = null)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(visit.title.ifBlank { "Vet visit" }, style = MaterialTheme.typography.titleMedium)
+                    if (records.due.isNotEmpty()) {
+                        item(key = "vaccines-due", contentType = "vaccines") {
+                            VaccineDueCard(
+                                petName = pet.name,
+                                due = records.due,
+                                today = today,
+                                onOpen = { d -> actions.navigate(Route.RecordDetail(pet.id, d.documentId)) },
+                                modifier = motionAwareAnimateItem(),
+                            )
+                        }
+                    }
+                    if (state.refills.isNotEmpty()) {
+                        items(state.refills, key = { "refill-" + it.id }, contentType = { "refill" }) { med ->
+                            GpCard(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                onClick = { actions.navigate(Route.Meds(pet.id)) },
+                                modifier = motionAwareAnimateItem(),
+                            ) {
+                                Text("Refill ${med.name} soon", style = MaterialTheme.typography.titleMedium)
+                                val days = med.daysOfSupplyLeft()
                                 Text(
-                                    "${Formats.relativeDay(Formats.date(visit.at), today)} at ${Formats.time(visit.at)}" +
-                                        if (visit.clinic.isNotBlank()) " · ${visit.clinic}" else "",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    if (days != null && days > 0) "About $days days of supply left" else "Supply has run out",
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
                         }
                     }
-                }
-            }
-            if (records.due.isNotEmpty()) {
-                item(key = "vaccines-due", contentType = "vaccines") {
-                    VaccineDueCard(
-                        petName = pet.name,
-                        due = records.due,
-                        today = today,
-                        onOpen = { d -> actions.navigate(Route.RecordDetail(pet.id, d.documentId)) },
-                        modifier = motionAwareAnimateItem(),
-                    )
-                }
-            }
-            if (state.refills.isNotEmpty()) {
-                items(state.refills, key = { "refill-" + it.id }, contentType = { "refill" }) { med ->
-                    GpCard(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        onClick = { actions.navigate(Route.Meds(pet.id)) },
-                        modifier = motionAwareAnimateItem(),
-                    ) {
-                        Text("Refill ${med.name} soon", style = MaterialTheme.typography.titleMedium)
-                        val days = med.daysOfSupplyLeft()
-                        Text(
-                            if (days != null && days > 0) "About $days days of supply left" else "Supply has run out",
-                            style = MaterialTheme.typography.bodyMedium,
+
+                    item(key = "meds-header", contentType = "section") {
+                        SectionHeader(
+                            title = "Meds today",
+                            action = "Manage",
+                            onAction = { actions.navigate(Route.Meds(pet.id)) },
+                            modifier = Modifier.coachMark(FeatureTips.Meds),
                         )
                     }
-                }
-            }
+                    if (state.todaySlots.isEmpty() && state.asNeeded.isEmpty()) {
+                        item(key = "meds-empty", contentType = "empty") {
+                            GpCard(onClick = { actions.navigate(Route.MedEdit(pet.id)) }) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Outlined.LocalPharmacy, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text("No doses scheduled today", style = MaterialTheme.typography.titleMedium)
+                                        Text(
+                                            "Add a medication to get gentle reminders.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    Icon(Icons.Filled.Add, contentDescription = "Add medication")
+                                }
+                            }
+                        }
+                    }
+                    state.todaySlots.forEachIndexed { index, slot ->
+                        item(key = slot.key, contentType = "dose") {
+                            DoseCard(
+                                slot = slot,
+                                team = state.team,
+                                canUndo = ScheduleEngine.canUndo(slot.event, state.now),
+                                onGive = { vm.give(slot) },
+                                onSkip = { vm.skip(slot) },
+                                onUndo = { vm.undo(slot) },
+                                modifier = motionAwareAnimateItem().staggerIn(stagger, slot.key, index + 2),
+                            )
+                        }
+                    }
+                    if (state.asNeeded.isNotEmpty()) {
+                        item(key = "prn", contentType = "prn") {
+                            GpCard {
+                                Text("As needed", style = MaterialTheme.typography.titleMedium)
+                                Spacer(Modifier.height(8.dp))
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    state.asNeeded.forEach { med ->
+                                        AssistChip(
+                                            onClick = { vm.giveAsNeeded(med) },
+                                            label = { Text("Give ${med.name}") },
+                                            leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, Modifier.size(18.dp)) },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
 
-            item(key = "meds-header", contentType = "section") {
-                SectionHeader(
-                    title = "Meds today",
-                    action = "Manage",
-                    onAction = { actions.navigate(Route.Meds(pet.id)) },
-                    modifier = Modifier.coachMark(FeatureTips.Meds),
-                )
-            }
-            if (state.todaySlots.isEmpty() && state.asNeeded.isEmpty()) {
-                item(key = "meds-empty", contentType = "empty") {
-                    GpCard(onClick = { actions.navigate(Route.MedEdit(pet.id)) }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.LocalPharmacy, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text("No doses scheduled today", style = MaterialTheme.typography.titleMedium)
+                    if (state.todayCheckIn == null) {
+                        item(key = "checkin", contentType = "checkin") {
+                            GpCard(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                onClick = { actions.navigate(Route.CheckIn(pet.id)) },
+                                modifier = motionAwareAnimateItem(),
+                            ) {
+                                Text("How was ${pet.name}'s day?", style = MaterialTheme.typography.titleMedium)
                                 Text(
-                                    "Add a medication to get gentle reminders.",
+                                    "A 30-second check-in: appetite, water, mobility, mood, comfort, hygiene and sleep.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                            }
-                            Icon(Icons.Filled.Add, contentDescription = "Add medication")
-                        }
-                    }
-                }
-            }
-            state.todaySlots.forEachIndexed { index, slot ->
-                item(key = slot.key, contentType = "dose") {
-                    DoseCard(
-                        slot = slot,
-                        team = state.team,
-                        canUndo = ScheduleEngine.canUndo(slot.event, state.now),
-                        onGive = { vm.give(slot) },
-                        onSkip = { vm.skip(slot) },
-                        onUndo = { vm.undo(slot) },
-                        modifier = motionAwareAnimateItem().staggerIn(stagger, slot.key, index + 2),
-                    )
-                }
-            }
-            if (state.asNeeded.isNotEmpty()) {
-                item(key = "prn", contentType = "prn") {
-                    GpCard {
-                        Text("As needed", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(8.dp))
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            state.asNeeded.forEach { med ->
-                                AssistChip(
-                                    onClick = { vm.giveAsNeeded(med) },
-                                    label = { Text("Give ${med.name}") },
-                                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, Modifier.size(18.dp)) },
-                                )
+                                Spacer(Modifier.height(10.dp))
+                                FilledTonalButton(onClick = { actions.navigate(Route.CheckIn(pet.id)) }) { Text("Start check-in") }
                             }
                         }
                     }
-                }
-            }
 
-            if (state.todayCheckIn == null) {
-                item(key = "checkin", contentType = "checkin") {
-                    GpCard(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        onClick = { actions.navigate(Route.CheckIn(pet.id)) },
-                        modifier = motionAwareAnimateItem(),
-                    ) {
-                        Text("How was ${pet.name}'s day?", style = MaterialTheme.typography.titleMedium)
+                    item(key = "week", contentType = "week") {
+                        WeekCard(
+                            petName = pet.name,
+                            headline = state.weekSummary?.headline,
+                            isPlus = state.isPlus,
+                            onClick = { actions.navigate(Route.Insights) },
+                        )
+                    }
+
+                    gamification?.memories?.firstOrNull()?.let { memory ->
+                        item(key = "memory", contentType = "memory") {
+                            GpCard(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                                Text("${memory.label} · ${Fmt.dayMonthYear(memory.date)}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.height(4.dp))
+                                Text(memory.text, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+
+                    state.latestWeight?.let { w ->
+                        item(key = "weight", contentType = "weight") {
+                            GpCard(onClick = { weightDialog = true }) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Outlined.FitnessCenter, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(UnitConversion.format(w.weightKg, state.weightUnit), style = MaterialTheme.typography.titleMedium)
+                                        Text(
+                                            "Last weighed ${Formats.relativeDay(w.date, today).lowercase()}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    TextButton(onClick = { weightDialog = true }) { Text("Log") }
+                                }
+                            }
+                        }
+                    }
+
+                    if (state.upcoming.isNotEmpty()) {
+                        item(key = "upcoming", contentType = "upcoming") { UpcomingSection(state.upcoming, today) }
+                    }
+                    item(key = "disclaimer", contentType = "disclaimer") {
                         Text(
-                            "A 30-second check-in: appetite, water, mobility, mood, comfort, hygiene and sleep.",
+                            "GoldenPaw helps you keep track. It isn't veterinary advice. If something worries you, call your vet.",
                             style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp),
                         )
-                        Spacer(Modifier.height(10.dp))
-                        FilledTonalButton(onClick = { actions.navigate(Route.CheckIn(pet.id)) }) { Text("Start check-in") }
                     }
                 }
-            }
-
-            item(key = "week", contentType = "week") {
-                WeekCard(
-                    petName = pet.name,
-                    headline = state.weekSummary?.headline,
-                    isPlus = state.isPlus,
-                    onClick = { actions.navigate(Route.Insights) },
-                )
-            }
-
-            gamification?.memories?.firstOrNull()?.let { memory ->
-                item(key = "memory", contentType = "memory") {
-                    GpCard(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                        Text("${memory.label} · ${Fmt.dayMonthYear(memory.date)}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.height(4.dp))
-                        Text(memory.text, style = MaterialTheme.typography.bodyMedium)
-                    }
                 }
-            }
-
-            state.latestWeight?.let { w ->
-                item(key = "weight", contentType = "weight") {
-                    GpCard(onClick = { weightDialog = true }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.FitnessCenter, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(UnitConversion.format(w.weightKg, state.weightUnit), style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "Last weighed ${Formats.relativeDay(w.date, today).lowercase()}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            TextButton(onClick = { weightDialog = true }) { Text("Log") }
-                        }
-                    }
-                }
-            }
-
-            if (state.upcoming.isNotEmpty()) {
-                item(key = "upcoming", contentType = "upcoming") { UpcomingSection(state.upcoming, today) }
-            }
-            item(key = "disclaimer", contentType = "disclaimer") {
-                Text(
-                    "GoldenPaw helps you keep track. It isn't veterinary advice. If something worries you, call your vet.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
             }
         }
     }
@@ -962,3 +978,5 @@ private fun CaregiverSwitcher(team: CareTeam?, onPick: (String) -> Unit, onManag
         }
     }
 }
+
+private enum class TodayPhase { LOADING, EMPTY, CONTENT }

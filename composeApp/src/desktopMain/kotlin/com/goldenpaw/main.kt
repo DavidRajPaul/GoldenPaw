@@ -1,5 +1,15 @@
 package com.goldenpaw
 
+import com.goldenpaw.platform.DesktopBackEvents
+
+import androidx.compose.ui.input.key.type
+
+import androidx.compose.ui.input.key.key
+
+import androidx.compose.ui.input.key.KeyEventType
+
+import androidx.compose.ui.input.key.Key
+
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Notification
@@ -45,6 +55,11 @@ fun main() {
             title = "GoldenPaw",
             icon = icon,
             state = rememberWindowState(size = DpSize(440.dp, 900.dp)),
+            // Escape goes back one screen. onKeyEvent (not preview) so dialogs and text fields that
+            // handle Escape themselves get it first.
+            onKeyEvent = { event ->
+                event.key == Key.Escape && event.type == KeyEventType.KeyUp && DesktopBackEvents.requestBack()
+            },
         ) {
             GoldenPawApp(launchRequests = launchRequests, onLaunchRequestHandled = { launchRequests.value = null })
         }

@@ -61,6 +61,12 @@ interface CloudAuthRepository {
     /** Current session, refreshed if it's about to expire; null when signed out. */
     suspend fun validSession(): CloudSession?
     suspend fun signOut()
+    /**
+     * Permanently deletes the cloud account: households the owner created (and everything shared in
+     * them), memberships elsewhere, push devices and the sign-in. Signs out afterwards. Data on this
+     * device is untouched.
+     */
+    suspend fun deleteAccount(): Result<Unit> = Result.failure(UnsupportedOperationException("Not available"))
 }
 
 /** Shared care: uploads a household, invites people and keeps every device in sync. */

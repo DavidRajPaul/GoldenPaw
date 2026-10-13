@@ -1,5 +1,13 @@
 package com.goldenpaw.ui.checkin
 
+import androidx.compose.animation.AnimatedVisibility
+
+import com.goldenpaw.ui.designsystem.LocalReduceMotion
+
+import com.goldenpaw.ui.designsystem.MotionSpecs
+
+import androidx.compose.animation.AnimatedContent
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -160,7 +168,11 @@ fun CheckInScreen(petId: String) {
         topBar = { GpTopBar(title = if (pet != null) "${pet.name}'s check-in" else "Check-in", onBack = actions.back) },
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if (state.saved == null) {
+            AnimatedVisibility(
+                visible = state.saved == null,
+                enter = MotionSpecs.barEnter(LocalReduceMotion.current),
+                exit = MotionSpecs.barExit(LocalReduceMotion.current),
+            ) {
                 Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
                     Row(
                         Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(16.dp),
@@ -184,65 +196,74 @@ fun CheckInScreen(petId: String) {
         },
     ) { padding ->
         val saved = state.saved
-        if (saved != null) {
-            SavedSummary(saved, petName = pet?.name.orEmpty(), padding = padding, onDone = actions.back)
-            return@Scaffold
-        }
-        val date = state.date ?: return@Scaffold
-        val today = state.today ?: date
-        LazyColumn(
-            contentPadding = PaddingValues(
-                start = 20.dp, end = 20.dp,
-                top = padding.calculateTopPadding() + 4.dp,
-                bottom = padding.calculateBottomPadding() + 24.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(22.dp),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            item {
-                Column {
-                    Text(
-                        "Tap the face that fits best. There are no wrong answers, just today's picture.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    DateField(
-                        label = "Day",
-                        date = date,
-                        onDate = vm::setDate,
-                        placeholder = Formats.relativeDay(date, today),
-                    )
-                    if (state.isEditing) {
+        // Form → summary: a fade-through, so saving feels like a step forward rather than a cut.
+        val reduceSave = LocalReduceMotion.current
+        AnimatedContent(
+            targetState = saved,
+            contentKey = { it != null },
+            transitionSpec = { MotionSpecs.fadeThrough(reduceSave, MotionSpecs.FadePreset.Screen) },
+            label = "checkInSaved",
+        ) { shownSaved ->
+            if (shownSaved != null) {
+                SavedSummary(shownSaved, petName = pet?.name.orEmpty(), padding = padding, onDone = actions.back)
+                return@AnimatedContent
+            }
+            val date = state.date ?: return@AnimatedContent
+            val today = state.today ?: date
+            LazyColumn(
+                contentPadding = PaddingValues(
+                    start = 20.dp, end = 20.dp,
+                    top = padding.calculateTopPadding() + 4.dp,
+                    bottom = padding.calculateBottomPadding() + 24.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(22.dp),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                item {
+                    Column {
                         Text(
-                            "Editing the check-in for ${Formats.relativeDay(date, today).lowercase()}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 6.dp),
+                            "Tap the face that fits best. There are no wrong answers, just today's picture.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        Spacer(Modifier.height(12.dp))
+                        DateField(
+                            label = "Day",
+                            date = date,
+                            onDate = vm::setDate,
+                            placeholder = Formats.relativeDay(date, today),
+                        )
+                        if (state.isEditing) {
+                            Text(
+                                "Editing the check-in for ${Formats.relativeDay(date, today).lowercase()}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 6.dp),
+                            )
+                        }
                     }
                 }
-            }
-            itemsIndexed(CheckInCategory.entries.toList(), key = { _, c -> c.name }) { index, category ->
-                EmojiScale(
-                    label = category.label,
-                    question = category.question,
-                    lowLabel = category.lowLabel,
-                    highLabel = category.highLabel,
-                    value = state.values[category],
-                    onValue = { haptics.tick(); vm.setValue(category, it) },
-                    modifier = Modifier.staggerIn(stagger, category.name, index),
-                )
-            }
-            item {
-                OutlinedTextField(
-                    value = state.notes,
-                    onValueChange = vm::setNotes,
-                    label = { Text("Anything else? (optional)") },
-                    placeholder = { Text("e.g. Slow on the stairs this morning, ate all dinner") },
-                    minLines = 3,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                itemsIndexed(CheckInCategory.entries.toList(), key = { _, c -> c.name }) { index, category ->
+                    EmojiScale(
+                        label = category.label,
+                        question = category.question,
+                        lowLabel = category.lowLabel,
+                        highLabel = category.highLabel,
+                        value = state.values[category],
+                        onValue = { haptics.tick(); vm.setValue(category, it) },
+                        modifier = Modifier.staggerIn(stagger, category.name, index),
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = state.notes,
+                        onValueChange = vm::setNotes,
+                        label = { Text("Anything else? (optional)") },
+                        placeholder = { Text("e.g. Slow on the stairs this morning, ate all dinner") },
+                        minLines = 3,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
     }
