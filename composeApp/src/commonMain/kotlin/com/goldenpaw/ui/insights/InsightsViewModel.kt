@@ -163,17 +163,23 @@ class InsightsViewModel(
     val weekly: StateFlow<WeeklyUiState> = _weekly.asStateFlow()
 
     /** Loads the digest (free) and, for Plus, the written summary for the given week. */
-    fun loadWeek(weekStart: LocalDate = clock.today().startOfWeek(), force: Boolean = false) = viewModelScope.launch {
+    fun loadWeek(weekStart: LocalDate = clock.today().startOfWeek(), force: Boolean = false, unlockedOnce: Boolean = false) = viewModelScope.launch {
         val pet = state.value.pet ?: return@launch
         val start = weekStart.startOfWeek()
         _weekly.update { it.copy(weekStart = start, generating = true, error = null) }
         val digest = runCatching { buildDigest(pet.id, start) }.getOrNull()
-        val summary = if (state.value.isPlus) {
+        val summary = if (state.value.isPlus || unlockedOnce) {
             runCatching { generateSummary(pet.id, start, forceRefresh = force) }
                 .onFailure { e -> _weekly.update { it.copy(error = e.message) } }
                 .getOrNull()
         } else null
         _weekly.update { it.copy(digest = digest, summary = summary, generating = false) }
+    }
+
+    /** A free owner watched a rewarded video: write this one week's summary. */
+    fun unlockWeekOnce() {
+        val start = _weekly.value.weekStart ?: clock.today().startOfWeek()
+        loadWeek(start, unlockedOnce = true)
     }
 
     fun previousWeek() {

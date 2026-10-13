@@ -11,6 +11,7 @@ import com.goldenpaw.domain.model.DoseSlot
 import com.goldenpaw.domain.model.GamificationState
 import com.goldenpaw.domain.model.Pet
 import com.goldenpaw.data.remote.PushRegistrationService
+import com.goldenpaw.data.ads.PromotionsService
 import com.goldenpaw.domain.model.PricingCatalog
 import com.goldenpaw.domain.model.PushMessage
 import com.goldenpaw.domain.repository.CareSyncRepository
@@ -81,6 +82,7 @@ class AppViewModel(
     private val pricing: PricingRepository,
     private val push: PushRegistrationService,
     private val pushPlatform: PushPlatform,
+    private val promotions: PromotionsService,
 ) : ViewModel() {
 
     private val ready = MutableStateFlow(false)
@@ -93,6 +95,10 @@ class AppViewModel(
             initializer.initialize()
             pricing.restore()
             launch { pricing.refresh() }
+            // Calm promotions: count this launch as a session and load the backend policy.
+            promotions.restore()
+            promotions.startSession()
+            launch { promotions.refresh() }
             ready.value = true
             runCatching { reminders.rescheduleAll() }
             // Quietly sync shared households on launch.

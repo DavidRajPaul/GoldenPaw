@@ -1,5 +1,9 @@
 package com.goldenpaw.ui.insights
 
+import com.goldenpaw.domain.ads.AdPlacement
+import com.goldenpaw.ui.ads.PromoSlot
+import com.goldenpaw.ui.ads.RewardedUnlockButton
+
 import com.goldenpaw.ui.designsystem.loadingSemantics
 
 import com.goldenpaw.ui.designsystem.MotionSpecs
@@ -175,8 +179,12 @@ private fun WeeklyTab(state: InsightsState, weekly: WeeklyUiState, padding: Padd
         weekly.digest?.let { d -> item(key = "stats") { DigestStats(d) } }
         item(key = "summary") {
             when {
-                !state.isPlus -> LockedSummaryCard(state.pet?.name.orEmpty()) {
-                    actions.showPaywall("Weekly summaries turn your logs into a short, kind story of the week, with things worth mentioning to your vet.")
+                !state.isPlus && weekly.summary == null -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LockedSummaryCard(state.pet?.name.orEmpty()) {
+                        actions.showPaywall("Weekly summaries turn your logs into a short, kind story of the week, with things worth mentioning to your vet.")
+                    }
+                    // Only appears when an ad network can serve a rewarded video (not in this build).
+                    RewardedUnlockButton(onUnlocked = vm::unlockWeekOnce)
                 }
                 weekly.generating && weekly.summary == null -> Column(
                     Modifier.loadingSemantics("Writing this week's summary"),
@@ -200,6 +208,8 @@ private fun WeeklyTab(state: InsightsState, weekly: WeeklyUiState, padding: Padd
                 }
             }
         }
+        // The one calm promotion slot on this screen (renders nothing unless the engine allows it).
+        item(key = "promo", contentType = "promo") { PromoSlot(AdPlacement.INSIGHTS_FEED) }
         val older = state.summaries.filter { it.weekStart != start }
         if (state.isPlus && older.isNotEmpty()) {
             item(key = "olderHeader") {

@@ -57,6 +57,9 @@ import com.goldenpaw.domain.usecase.CareAttribution
 import com.goldenpaw.data.remote.PushRegistrationService
 import com.goldenpaw.data.remote.RemotePricingRepository
 import com.goldenpaw.data.settings.FeatureTipsStore
+import com.goldenpaw.data.ads.PromotionsService
+import com.goldenpaw.domain.ads.AdNetwork
+import com.goldenpaw.domain.ads.NoAdNetwork
 import com.goldenpaw.domain.repository.PricingRepository
 import com.goldenpaw.domain.repository.PushPlatform
 
@@ -114,6 +117,15 @@ val sharedModule = module {
     single<PricingRepository> { RemotePricingRepository(get(), get(), get<KeyValueStore>(), get<PushPlatform>().platform) }
     single { PushRegistrationService(get(), get(), get<KeyValueStore>(), get(), get()) }
     single { FeatureTipsStore(get<KeyValueStore>()) }
+    // Calm promotions (docs/MONETIZATION_ADS.md). No ad SDK yet: NoAdNetwork until one is integrated.
+    single<AdNetwork> { NoAdNetwork }
+    single {
+        val push = get<PushRegistrationService>()
+        PromotionsService(
+            config = get(), http = get(), store = get<KeyValueStore>(), settings = get(), pets = get(), checkIns = get(),
+            clock = get(), network = get(), platform = get<PushPlatform>().platform, installId = { push.installId() },
+        )
+    }
 
     // Domain services & use cases
     single { CareTeamService(get(), get(), get(), get(), get()) } bind CareAttribution::class

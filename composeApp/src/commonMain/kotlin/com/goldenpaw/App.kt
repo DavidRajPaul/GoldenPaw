@@ -85,6 +85,7 @@ import com.goldenpaw.ui.records.RecordDetailScreen
 import com.goldenpaw.ui.records.RecordScanScreen
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.rememberUpdatedState
 import com.goldenpaw.data.settings.FeatureTipsStore
 import com.goldenpaw.ui.tour.AppTour
 import com.goldenpaw.ui.tour.CoachMarkController
@@ -185,23 +186,8 @@ private fun AppContent(
         coachMarks.enabled = tipsAllowed
     }
 
-    val actions = remember(navigator) {
-        AppActions(
-            navigate = { route -> navigator.navigate(route) },
-            back = { if (!navigator.back()) navigator.switchTab(Route.Today) },
-            goHome = { navigator.switchTab(Route.Today) },
-            showPaywall = { reason -> paywallReason = reason },
-            selectPet = { id -> appVm.selectPet(id) },
-            canAddPet = { appVm.canAddPet() },
-            openQuickLog = { quickLogOpen = true },
-        )
-    }
-
-    // Deep links from notifications, the home-screen widget and app shortcuts.
-    val request by launchRequests.collectAsStateWithLifecycle()
-    LaunchedEffect(request, state.settings.onboardingDone) {
-        val r = request ?: return@LaunchedEffect
-        if (!state.settings.onboardingDone) return@LaunchedEffect
+    // One router for deep links from notifications, the widget, shortcuts and in-app promotions.
+    val route = rememberUpdatedState { r: LaunchRequest ->
         r.petId?.let { appVm.selectPet(it) }
         val petId = r.petId ?: state.selectedPet?.id
         when (r.open) {
@@ -218,6 +204,26 @@ private fun AppContent(
             }
             else -> navigator.switchTab(Route.Today)
         }
+        Unit
+    }
+    val actions = remember(navigator) {
+        AppActions(
+            navigate = { destination -> navigator.navigate(destination) },
+            back = { if (!navigator.back()) navigator.switchTab(Route.Today) },
+            goHome = { navigator.switchTab(Route.Today) },
+            showPaywall = { reason -> paywallReason = reason },
+            selectPet = { id -> appVm.selectPet(id) },
+            canAddPet = { appVm.canAddPet() },
+            openQuickLog = { quickLogOpen = true },
+            openLink = { r -> route.value(r) },
+        )
+    }
+
+    val request by launchRequests.collectAsStateWithLifecycle()
+    LaunchedEffect(request, state.settings.onboardingDone) {
+        val r = request ?: return@LaunchedEffect
+        if (!state.settings.onboardingDone) return@LaunchedEffect
+        route.value(r)
         onLaunchRequestHandled()
     }
 
