@@ -58,6 +58,7 @@ import com.goldenpaw.data.remote.PushRegistrationService
 import com.goldenpaw.data.remote.RemotePricingRepository
 import com.goldenpaw.data.settings.FeatureTipsStore
 import com.goldenpaw.data.ads.PromotionsService
+import com.goldenpaw.data.support.SupportService
 import com.goldenpaw.domain.ads.AdNetwork
 import com.goldenpaw.domain.ads.NoAdNetwork
 import com.goldenpaw.domain.repository.PricingRepository
@@ -117,6 +118,11 @@ val sharedModule = module {
     single<PricingRepository> { RemotePricingRepository(get(), get(), get<KeyValueStore>(), get<PushPlatform>().platform) }
     single { PushRegistrationService(get(), get(), get<KeyValueStore>(), get(), get()) }
     single { FeatureTipsStore(get<KeyValueStore>()) }
+    // Help & support (docs/SUPPORT.md).
+    single {
+        val push = get<PushRegistrationService>()
+        SupportService(config = get(), http = get(), auth = get(), installId = { push.installId() })
+    }
     // Calm promotions (docs/MONETIZATION_ADS.md). No ad SDK yet: NoAdNetwork until one is integrated.
     single<AdNetwork> { NoAdNetwork }
     single {

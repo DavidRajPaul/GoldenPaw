@@ -33,6 +33,7 @@ kotlinxSerialization = "1.8.1"
 kotlinxDatetime = "0.6.2"
 
 [libraries]
+compose-ui-backhandler = { module = "org.jetbrains.compose.ui:ui-backhandler", version.ref = "composeMultiplatform" }
 # Android
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCoreKtx" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivityCompose" }

@@ -45,6 +45,11 @@ class IosPlatformServices(private val reminders: IosReminderScheduler) : Platfor
         UIApplication.sharedApplication.openURL(url, options = emptyMap<Any?, Any>(), completionHandler = null)
     }
 
+    override fun openUrl(url: String) {
+        val nsUrl = NSURL.URLWithString(url) ?: return
+        UIApplication.sharedApplication.openURL(nsUrl, options = emptyMap<Any?, Any>(), completionHandler = null)
+    }
+
     private fun health(allowed: Boolean) = ReminderHealth(
         notifications = allowed,
         exactAlarms = true,

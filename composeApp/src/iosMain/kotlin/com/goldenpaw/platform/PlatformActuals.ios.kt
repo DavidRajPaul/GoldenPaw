@@ -1,6 +1,10 @@
 package com.goldenpaw.platform
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.backhandler.BackEventCompat
+import androidx.compose.ui.backhandler.PredictiveBackHandler
+import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.ImageBitmap
@@ -123,6 +127,7 @@ internal fun openAppSettings() {
     UIApplication.sharedApplication.openURL(url, options = emptyMap<Any?, Any>(), completionHandler = null)
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 actual fun PlatformBackHandler(
     enabled: Boolean,
@@ -130,7 +135,17 @@ actual fun PlatformBackHandler(
     onCancel: () -> Unit,
     onBack: () -> Unit,
 ) {
-    // iOS navigation uses the top-bar back buttons.
+    // The edge-swipe gesture (ComposeUIViewController's back gesture) drives the same predictive
+    // progress callbacks as Android, so the pop preview follows the finger.
+    PredictiveBackHandler(enabled = enabled) { events ->
+        try {
+            events.collect { e -> onProgress(e.progress, e.swipeEdge == BackEventCompat.EDGE_LEFT) }
+            onBack()
+        } catch (e: CancellationException) {
+            onCancel()
+            throw e
+        }
+    }
 }
 
 /** The report is shared via the system sheet, which shows its own preview on iOS. */

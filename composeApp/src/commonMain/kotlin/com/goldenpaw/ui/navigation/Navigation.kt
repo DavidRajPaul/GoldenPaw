@@ -60,6 +60,7 @@ sealed interface Route {
     data object Reminders : Route
     data object CareTeam : Route
     data object Achievements : Route
+    data object Help : Route
     data class PetDetail(val petId: String) : Route
     data class PetEdit(val petId: String? = null) : Route
     data class Memorial(val petId: String) : Route

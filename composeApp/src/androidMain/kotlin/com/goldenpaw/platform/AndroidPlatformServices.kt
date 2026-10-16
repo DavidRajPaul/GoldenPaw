@@ -53,6 +53,12 @@ class AndroidPlatformServices(
 
     override fun dial(phone: String) = start(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")))
 
+    override fun openUrl(url: String) {
+        val uri = Uri.parse(url)
+        // mailto: via SENDTO so only email apps answer.
+        start(if (url.startsWith("mailto:")) Intent(Intent.ACTION_SENDTO, uri) else Intent(Intent.ACTION_VIEW, uri))
+    }
+
     override fun reminderHealth() = ReminderHealth(
         notifications = notifications.canPost(),
         exactAlarms = scheduler.canScheduleExact(),

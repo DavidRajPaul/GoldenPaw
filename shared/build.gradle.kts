@@ -40,6 +40,9 @@ val firebaseApiKey = configValue("firebase.apiKey", "GOLDENPAW_FIREBASE_API_KEY"
 val firebaseSenderId = configValue("firebase.senderId", "GOLDENPAW_FIREBASE_SENDER_ID")
 val appVersionName = providers.gradleProperty("goldenpaw.versionName").getOrElse("1.0.0")
 val appVersionCode = providers.gradleProperty("goldenpaw.versionCode").getOrElse("1")
+// Public support details (not secrets): gradle.properties or local.properties. Blank = hidden in the app.
+val supportEmail = (localProps.getProperty("goldenpaw.supportEmail") ?: providers.gradleProperty("goldenpaw.supportEmail").getOrElse("")).trim()
+val privacyPolicyUrl = (localProps.getProperty("goldenpaw.privacyUrl") ?: providers.gradleProperty("goldenpaw.privacyUrl").getOrElse("")).trim()
 
 val generateAppConfig by tasks.registering {
     val outDir = layout.buildDirectory.dir("generated/appconfig/commonMain/kotlin")
@@ -51,6 +54,10 @@ val generateAppConfig by tasks.registering {
     inputs.property("key", key)
     inputs.property("versionName", versionName)
     inputs.property("versionCode", versionCode)
+    val support = supportEmail
+    val privacy = privacyPolicyUrl
+    inputs.property("supportEmail", support)
+    inputs.property("privacyUrl", privacy)
     val fbProject = firebaseProjectId
     val fbAppId = firebaseAndroidAppId
     val fbApiKey = firebaseApiKey
@@ -72,6 +79,8 @@ val generateAppConfig by tasks.registering {
             |object AppConfig {
             |    const val VERSION_NAME: String = "${esc(versionName)}"
             |    const val VERSION_CODE: Int = $versionCode
+            |    const val SUPPORT_EMAIL: String = "${esc(support)}"
+            |    const val PRIVACY_POLICY_URL: String = "${esc(privacy)}"
             |    const val SUPABASE_URL: String = "${esc(url)}"
             |    const val SUPABASE_ANON_KEY: String = "${esc(key)}"
             |    val isCloudConfigured: Boolean get() = SUPABASE_URL.isNotBlank() && SUPABASE_ANON_KEY.isNotBlank()

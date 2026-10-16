@@ -73,6 +73,10 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.kotlinx.coroutines.android)
         }
+        iosMain.dependencies {
+            // Edge-swipe back gesture (PredictiveBackHandler) on iOS.
+            implementation(libs.compose.ui.backhandler)
+        }
         val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)

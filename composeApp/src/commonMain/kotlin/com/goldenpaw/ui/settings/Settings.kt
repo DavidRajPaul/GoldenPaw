@@ -368,6 +368,14 @@ fun SettingsScreen() {
             item { SectionHeader("About") }
             item {
                 SettingRow(
+                    title = "Help & support",
+                    subtitle = "Answers, billing help and a way to reach us",
+                    onClick = { actions.navigate(Route.Help) },
+                    chevron = true,
+                )
+            }
+            item {
+                SettingRow(
                     title = "Replay the app tour",
                     subtitle = "See the welcome tour and feature tips again",
                     onClick = { vm.replayTour { actions.goHome() } },
