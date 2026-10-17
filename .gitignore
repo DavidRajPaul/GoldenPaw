@@ -31,3 +31,11 @@ supabase/.branches/
 *.mobileprovision
 keystore.properties
 .env.*
+*.p8
+*.pem
+google-services.json
+GoogleService-Info.plist
+*service-account*.json
+*-credentials.json
+supabase/secrets.env
+/secrets/

@@ -52,7 +52,7 @@ private data class PlusFeature(val icon: ImageVector, val title: String, val bod
 private val features = listOf(
     PlusFeature(GpIcons.Pet, "Every pet in the family", "Track as many dogs and cats as you care for, each with their own meds and history."),
     PlusFeature(GpIcons.Sparkle, "Weekly summaries", "A short, kind write-up of each week with things worth asking your vet. Not veterinary advice."),
-    PlusFeature(GpIcons.Cloud, "Cloud backup", "Restore everything on a new phone. Your history is never lost."),
+    PlusFeature(GpIcons.Cloud, "Cloud backup", "Your care records sync securely, so a new phone picks up where you left off. Photos and scans stay on your device."),
     PlusFeature(GpIcons.Insights, "Deeper trends", "Longer history and side-by-side symptom and quality-of-life trends."),
 )
 

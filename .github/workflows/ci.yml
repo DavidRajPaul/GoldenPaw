@@ -59,6 +59,10 @@ jobs:
           # Optional repository secrets: build with care-team sharing and AI summaries switched on.
           GOLDENPAW_SUPABASE_URL: ${{ secrets.GOLDENPAW_SUPABASE_URL }}
           GOLDENPAW_SUPABASE_ANON_KEY: ${{ secrets.GOLDENPAW_SUPABASE_ANON_KEY }}
+          GOLDENPAW_FIREBASE_PROJECT_ID: ${{ secrets.GOLDENPAW_FIREBASE_PROJECT_ID }}
+          GOLDENPAW_FIREBASE_SENDER_ID: ${{ secrets.GOLDENPAW_FIREBASE_SENDER_ID }}
+          GOLDENPAW_FIREBASE_ANDROID_APP_ID: ${{ secrets.GOLDENPAW_FIREBASE_ANDROID_APP_ID }}
+          GOLDENPAW_FIREBASE_API_KEY: ${{ secrets.GOLDENPAW_FIREBASE_API_KEY }}
         run: ./gradlew :composeApp:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
@@ -96,8 +100,12 @@ jobs:
           xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             ARCHS=arm64 CODE_SIGNING_ALLOWED=NO -derivedDataPath iosApp/build build 2>&1 | tee -a ios-build.log
-      - name: Check privacy manifest is bundled
-        run: test -f iosApp/build/Build/Products/Debug-iphonesimulator/iosApp.app/PrivacyInfo.xcprivacy
+      - name: Check privacy manifest and app icon are bundled
+        run: |
+          APP=iosApp/build/Build/Products/Debug-iphonesimulator/iosApp.app
+          test -f "$APP/PrivacyInfo.xcprivacy"
+          test -f "$APP/Assets.car"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon" "$APP/Info.plist"
       # Surface compiler/linker errors as annotations on the run summary (readable without the raw log).
       - name: Report build errors
         if: failure()
