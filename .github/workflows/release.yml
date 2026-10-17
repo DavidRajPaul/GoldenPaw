@@ -71,7 +71,15 @@ jobs:
           GOLDENPAW_FIREBASE_SENDER_ID: ${{ secrets.GOLDENPAW_FIREBASE_SENDER_ID }}
           GOLDENPAW_FIREBASE_ANDROID_APP_ID: ${{ secrets.GOLDENPAW_FIREBASE_ANDROID_APP_ID }}
           GOLDENPAW_FIREBASE_API_KEY: ${{ secrets.GOLDENPAW_FIREBASE_API_KEY }}
-        run: ./gradlew :composeApp:bundleRelease -Pgoldenpaw.versionCode=$VERSION_CODE --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew :composeApp:bundleRelease -Pgoldenpaw.versionCode=$VERSION_CODE --stacktrace 2>&1 | tee gradle.log
+      - name: Report Gradle errors
+        if: failure()
+        run: |
+          test -f gradle.log || exit 0
+          { grep -A6 "What went wrong" gradle.log; grep -E "^e: |error:|Script compilation error|Unresolved reference" gradle.log; } \
+            | grep -v "^--$" | sort -u | head -30 | while IFS= read -r line; do echo "::error title=Gradle::${line}"; done
 
       - name: Check the bundle is signed with the upload key
         if: env.PUBLISH == 'true'

@@ -63,7 +63,15 @@ jobs:
           GOLDENPAW_FIREBASE_SENDER_ID: ${{ secrets.GOLDENPAW_FIREBASE_SENDER_ID }}
           GOLDENPAW_FIREBASE_ANDROID_APP_ID: ${{ secrets.GOLDENPAW_FIREBASE_ANDROID_APP_ID }}
           GOLDENPAW_FIREBASE_API_KEY: ${{ secrets.GOLDENPAW_FIREBASE_API_KEY }}
-        run: ./gradlew :composeApp:assembleDebug --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew :composeApp:assembleDebug --stacktrace 2>&1 | tee gradle.log
+      - name: Report Gradle errors
+        if: failure()
+        run: |
+          test -f gradle.log || exit 0
+          { grep -A6 "What went wrong" gradle.log; grep -E "^e: |error:|Script compilation error|Unresolved reference" gradle.log; } \
+            | grep -v "^--$" | sort -u | head -30 | while IFS= read -r line; do echo "::error title=Gradle::${line}"; done
       - uses: actions/upload-artifact@v4
         with:
           name: GoldenPaw-debug-apk
@@ -77,7 +85,15 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew :composeApp:compileKotlinDesktop --stacktrace
+      - run: |
+          set -o pipefail
+          ./gradlew :composeApp:compileKotlinDesktop --stacktrace 2>&1 | tee gradle.log
+      - name: Report Gradle errors
+        if: failure()
+        run: |
+          test -f gradle.log || exit 0
+          { grep -A6 "What went wrong" gradle.log; grep -E "^e: |error:|Script compilation error|Unresolved reference" gradle.log; } \
+            | grep -v "^--$" | sort -u | head -30 | while IFS= read -r line; do echo "::error title=Gradle::${line}"; done
 
   ios:
     name: iOS framework
