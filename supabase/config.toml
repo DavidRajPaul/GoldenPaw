@@ -7,3 +7,11 @@ verify_jwt = true
 # Admin-only: authenticates with PUSH_ADMIN_TOKEN instead of a user JWT.
 [functions.send-push]
 verify_jwt = false
+
+# Admin-only: called by the database (migration 0006) with PUSH_ADMIN_TOKEN.
+[functions.support-alert]
+verify_jwt = false
+
+# Called by RevenueCat with its own Authorization header (REVENUECAT_WEBHOOK_AUTH).
+[functions.revenuecat-webhook]
+verify_jwt = false

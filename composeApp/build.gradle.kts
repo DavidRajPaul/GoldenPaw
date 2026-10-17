@@ -12,6 +12,22 @@ plugins {
 val appVersionName = providers.gradleProperty("goldenpaw.versionName").getOrElse("1.0.0")
 val appVersionCode = providers.gradleProperty("goldenpaw.versionCode").getOrElse("1").toInt()
 
+// Play upload key. CI sets the ANDROID_* environment variables (see .github/workflows/release.yml);
+// locally, put storeFile/storePassword/keyAlias/keyPassword in keystore.properties (git-ignored).
+// Without either, release builds fall back to the debug key (side-loading only; Play rejects it).
+val keystoreProps = java.util.Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+fun signingValue(env: String, prop: String): String? =
+    System.getenv(env)?.takeIf { it.isNotBlank() } ?: keystoreProps.getProperty(prop)?.takeIf { it.isNotBlank() }
+val uploadStoreFile = signingValue("ANDROID_KEYSTORE_PATH", "storeFile")
+val uploadStorePassword = signingValue("ANDROID_KEYSTORE_PASSWORD", "storePassword")
+val uploadKeyAlias = signingValue("ANDROID_KEY_ALIAS", "keyAlias")
+val uploadKeyPassword = signingValue("ANDROID_KEY_PASSWORD", "keyPassword")
+val hasUploadKey = listOf(uploadStoreFile, uploadStorePassword, uploadKeyAlias, uploadKeyPassword).all { it != null } &&
+    rootProject.file(uploadStoreFile!!).exists()
+
 kotlin {
     androidTarget {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
@@ -106,6 +122,17 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    signingConfigs {
+        if (hasUploadKey) {
+            create("upload") {
+                storeFile = rootProject.file(uploadStoreFile!!)
+                storePassword = uploadStorePassword
+                keyAlias = uploadKeyAlias
+                keyPassword = uploadKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -115,9 +142,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Signed with the debug key so a release build can be side-loaded for perf testing.
-            // Replace with a real upload key before publishing to Play.
-            signingConfig = signingConfigs.getByName("debug")
+            // The Play upload key when configured (see top of file); otherwise the debug key, so a
+            // release build can still be side-loaded for performance testing.
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {

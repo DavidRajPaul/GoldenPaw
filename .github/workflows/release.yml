@@ -1,0 +1,101 @@
+name: Release builds
+
+# Signed Play bundle (.aab). Run it from Actions → "Release builds" → Run workflow, or push a tag v1.2.3.
+# On pull requests that touch the build, it only checks that the minified (R8) release build compiles.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD   (upload key)
+#   GOLDENPAW_SUPABASE_URL, GOLDENPAW_SUPABASE_ANON_KEY                                           (backend)
+#   GOLDENPAW_FIREBASE_PROJECT_ID, _SENDER_ID, _ANDROID_APP_ID, _API_KEY                          (push)
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: "versionCode (blank = 100 + run number; must be higher than the last Play upload)"
+        required: false
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'composeApp/build.gradle.kts'
+      - 'composeApp/proguard-rules.pro'
+      - 'gradle/libs.versions.toml'
+      - '.github/workflows/release.yml'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-bundle:
+    name: Android release bundle
+    runs-on: ubuntu-latest
+    env:
+      PUBLISH: ${{ github.event_name != 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Upload key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+            echo "Upload key found."
+          elif [ "$PUBLISH" = "true" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. Add the upload key secrets first (see docs/LAUNCH.md)."
+            exit 1
+          else
+            echo "No upload key (pull request): building with the debug key to check R8 only."
+          fi
+
+      - name: Version
+        run: |
+          CODE="${{ inputs.version_code }}"
+          if [ -z "$CODE" ]; then CODE=$((100 + ${{ github.run_number }})); fi
+          echo "VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+          echo "versionCode $CODE"
+
+      - name: Build release bundle
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GOLDENPAW_SUPABASE_URL: ${{ secrets.GOLDENPAW_SUPABASE_URL }}
+          GOLDENPAW_SUPABASE_ANON_KEY: ${{ secrets.GOLDENPAW_SUPABASE_ANON_KEY }}
+          GOLDENPAW_FIREBASE_PROJECT_ID: ${{ secrets.GOLDENPAW_FIREBASE_PROJECT_ID }}
+          GOLDENPAW_FIREBASE_SENDER_ID: ${{ secrets.GOLDENPAW_FIREBASE_SENDER_ID }}
+          GOLDENPAW_FIREBASE_ANDROID_APP_ID: ${{ secrets.GOLDENPAW_FIREBASE_ANDROID_APP_ID }}
+          GOLDENPAW_FIREBASE_API_KEY: ${{ secrets.GOLDENPAW_FIREBASE_API_KEY }}
+        run: |
+          set -o pipefail
+          ./gradlew :composeApp:bundleRelease -Pgoldenpaw.versionCode=$VERSION_CODE --stacktrace 2>&1 | tee gradle.log
+      - name: Report Gradle errors
+        if: failure()
+        run: |
+          test -f gradle.log || exit 0
+          { grep -A6 "What went wrong" gradle.log; grep -E "^e: |error:|Script compilation error|Unresolved reference" gradle.log; } \
+            | grep -v "^--$" | sort -u | head -30 | while IFS= read -r line; do echo "::error title=Gradle::${line}"; done
+
+      - name: Check the bundle is signed with the upload key
+        if: env.PUBLISH == 'true'
+        run: |
+          AAB=$(ls composeApp/build/outputs/bundle/release/*.aab)
+          if jarsigner -verify -verbose -certs "$AAB" | grep -q "CN=Android Debug"; then
+            echo "::error::The bundle is signed with the debug key. Check the ANDROID_* secrets."
+            exit 1
+          fi
+          echo "Signed bundle: $AAB"
+
+      - uses: actions/upload-artifact@v4
+        if: env.PUBLISH == 'true'
+        with:
+          name: GoldenPaw-release-aab-${{ env.VERSION_CODE }}
+          path: |
+            composeApp/build/outputs/bundle/release/*.aab
+            composeApp/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error

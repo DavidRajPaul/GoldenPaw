@@ -114,6 +114,8 @@ Without Supabase keys the app is **fully local**: everything works except syncin
 
 ## ☁️ Turning on sharing and AI summaries (Supabase)
 
+**Fastest:** create the project, then run `./scripts/setup-supabase.sh` (migrations, secrets, functions, app keys in one go). The full launch checklist (Supabase, Firebase, signing, stores, website) is in [docs/LAUNCH.md](docs/LAUNCH.md).
+
 1. Create a Supabase project. In **Authentication → Email templates → Magic link**, include `{{ .Token }}` so users receive a 6-digit code.
 2. Apply the schema: `supabase link --project-ref <ref>` then `supabase db push` (or paste `supabase/migrations/0001_goldenpaw.sql` into the SQL editor).
 3. AI summaries: `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...` then `supabase functions deploy weekly-summary`. Optional `ANTHROPIC_MODEL` (defaults to `claude-haiku-4-5-20251001`).

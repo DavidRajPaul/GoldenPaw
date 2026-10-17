@@ -1,0 +1,23 @@
+# GoldenPaw public pages (privacy, terms, deletion, support), published with GitHub Pages.
+#
+# Before turning on Pages, fill in the TODO values below. They appear on every page.
+# Until you have a custom domain, the site lives at https://davidrajpaul.github.io/GoldenPaw/.
+# With a custom domain: set url to https://<domain>, baseurl to "", and add a CNAME file here.
+
+title: GoldenPaw
+description: Calm, caring support for your senior pet.
+url: "https://davidrajpaul.github.io"
+baseurl: "/GoldenPaw"
+
+# --- Fill these in -----------------------------------------------------------------------
+owner_name: "TODO: your full legal name"          # the developer / data fiduciary
+contact_email: "TODO: support@yourdomain"         # support + privacy + grievance contact
+postal_address: "TODO: city, state, India (PIN)"  # the address you are comfortable publishing
+grievance_officer: "TODO: your full legal name"
+effective_date: "TODO: date you publish, e.g. 1 December 2026"
+play_url: ""      # Google Play link once live
+app_store_url: "" # App Store link once live
+# ------------------------------------------------------------------------------------------
+
+markdown: kramdown
+exclude: [README.md]

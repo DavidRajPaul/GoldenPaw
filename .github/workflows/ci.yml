@@ -59,7 +59,19 @@ jobs:
           # Optional repository secrets: build with care-team sharing and AI summaries switched on.
           GOLDENPAW_SUPABASE_URL: ${{ secrets.GOLDENPAW_SUPABASE_URL }}
           GOLDENPAW_SUPABASE_ANON_KEY: ${{ secrets.GOLDENPAW_SUPABASE_ANON_KEY }}
-        run: ./gradlew :composeApp:assembleDebug --stacktrace
+          GOLDENPAW_FIREBASE_PROJECT_ID: ${{ secrets.GOLDENPAW_FIREBASE_PROJECT_ID }}
+          GOLDENPAW_FIREBASE_SENDER_ID: ${{ secrets.GOLDENPAW_FIREBASE_SENDER_ID }}
+          GOLDENPAW_FIREBASE_ANDROID_APP_ID: ${{ secrets.GOLDENPAW_FIREBASE_ANDROID_APP_ID }}
+          GOLDENPAW_FIREBASE_API_KEY: ${{ secrets.GOLDENPAW_FIREBASE_API_KEY }}
+        run: |
+          set -o pipefail
+          ./gradlew :composeApp:assembleDebug --stacktrace 2>&1 | tee gradle.log
+      - name: Report Gradle errors
+        if: failure()
+        run: |
+          test -f gradle.log || exit 0
+          { grep -A6 "What went wrong" gradle.log; grep -E "^e: |error:|Script compilation error|Unresolved reference" gradle.log; } \
+            | grep -v "^--$" | sort -u | head -30 | while IFS= read -r line; do echo "::error title=Gradle::${line}"; done
       - uses: actions/upload-artifact@v4
         with:
           name: GoldenPaw-debug-apk
@@ -73,7 +85,15 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew :composeApp:compileKotlinDesktop --stacktrace
+      - run: |
+          set -o pipefail
+          ./gradlew :composeApp:compileKotlinDesktop --stacktrace 2>&1 | tee gradle.log
+      - name: Report Gradle errors
+        if: failure()
+        run: |
+          test -f gradle.log || exit 0
+          { grep -A6 "What went wrong" gradle.log; grep -E "^e: |error:|Script compilation error|Unresolved reference" gradle.log; } \
+            | grep -v "^--$" | sort -u | head -30 | while IFS= read -r line; do echo "::error title=Gradle::${line}"; done
 
   ios:
     name: iOS framework
@@ -96,8 +116,12 @@ jobs:
           xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             ARCHS=arm64 CODE_SIGNING_ALLOWED=NO -derivedDataPath iosApp/build build 2>&1 | tee -a ios-build.log
-      - name: Check privacy manifest is bundled
-        run: test -f iosApp/build/Build/Products/Debug-iphonesimulator/iosApp.app/PrivacyInfo.xcprivacy
+      - name: Check privacy manifest and app icon are bundled
+        run: |
+          APP=iosApp/build/Build/Products/Debug-iphonesimulator/iosApp.app
+          test -f "$APP/PrivacyInfo.xcprivacy"
+          test -f "$APP/Assets.car"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon" "$APP/Info.plist"
       # Surface compiler/linker errors as annotations on the run summary (readable without the raw log).
       - name: Report build errors
         if: failure()
